@@ -9,13 +9,12 @@ import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfWriter
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.Image
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.zip.ZipFile
 
-fun extractImagesFromCBZ(fileUri: Uri, context: Context): List<Bitmap> {
-    val images = mutableListOf<Bitmap>()
-    val inputStream = context.contentResolver.openInputStream(fileUri) ?: return images
+fun extractImagesFromCBZ(fileUri: Uri, context: Context): List<File> {
+    val imageFiles = mutableListOf<File>()
+    val inputStream = context.contentResolver.openInputStream(fileUri) ?: return imageFiles
 
     // Copy the CBZ file to a temporary location
     val tempFile = File(context.cacheDir, "temp.cbz")
@@ -31,7 +30,7 @@ fun extractImagesFromCBZ(fileUri: Uri, context: Context): List<Bitmap> {
     var counter = 0
 
     while (fileHeaders.hasMoreElements()) {
-        val batch = mutableListOf<Bitmap>()
+        val batchFiles = mutableListOf<File>()
 
         // Process files in batches of `batchSize`
         repeat(batchSize) {
@@ -47,7 +46,13 @@ fun extractImagesFromCBZ(fileUri: Uri, context: Context): List<Bitmap> {
                 val bitmap = BitmapFactory.decodeStream(imageInputStream, null, options)
 
                 if (bitmap != null) {
-                    batch.add(bitmap)
+                    // Save bitmap to file
+                    val imageFile = File(context.cacheDir, "${System.currentTimeMillis()}.png")
+                    imageFile.outputStream().use { outputStream ->
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                    }
+                    batchFiles.add(imageFile)
+                    bitmap.recycle() // Recycle bitmap after saving
                 }
                 imageInputStream.close()
             } catch (e: Exception) {
@@ -55,41 +60,59 @@ fun extractImagesFromCBZ(fileUri: Uri, context: Context): List<Bitmap> {
             }
         }
 
-        // Add batch of images to the list
-        images.addAll(batch)
-        batch.forEach { it.recycle() } // Recycle bitmaps after processing
-
-        counter += batch.size
-        println("Number of files already processed: $counter - number of files with data: ${images.size} - next item to process ${counter + 1}")
+        // Add batch of image files to the list
+        imageFiles.addAll(batchFiles)
+        counter += batchFiles.size
+        println("Number of files already processed: $counter - number of files with data: ${imageFiles.size} - next item to process ${counter + 1}")
     }
 
     // Clean up temporary file
     tempFile.delete()
 
-    return images
+    return imageFiles
 }
 
-fun convertToPDF(images: List<Bitmap>, context: Context): File {
-    val outputFile = File(context.filesDir, "output.pdf")
 
+fun convertToPDF(imageFiles: List<File>, context: Context): File {
+    val downloadsFolder = File(context.getExternalFilesDir(null), "Downloads")
+    if (!downloadsFolder.exists()) {
+        downloadsFolder.mkdirs()
+    }
+
+    // Define the output file for the PDF
+    val outputFile = File(downloadsFolder, "output.pdf")
+    // Define the output file for the PDF
+//    val outputFile = File(context.filesDir, "output.pdf")
+
+    // Log the start of the PDF conversion process
+    println("Starting PDF conversion...")
+
+    // Create the PdfWriter and PdfDocument
     PdfWriter(outputFile.absolutePath).use { writer ->
         PdfDocument(writer).use { pdfDoc ->
             Document(pdfDoc).use { document ->
-                for (image in images) {
-                    // Convert Bitmap to byte array
-                    val byteArrayOutputStream = ByteArrayOutputStream()
-                    image.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)
-                    val imageBytes = byteArrayOutputStream.toByteArray()
+                // Loop through each image file and add it to the PDF
+                for ((index, imageFile) in imageFiles.withIndex()) {
+                    println("Processing image file ${index + 1} of ${imageFiles.size}: ${imageFile.absolutePath}")
 
-                    // Convert byte array to iText image
-                    val imageData = ImageDataFactory.create(imageBytes)
+                    // Convert the image file to iText image
+                    val imageData = ImageDataFactory.create(imageFile.absolutePath)
                     val pdfImage = Image(imageData)
 
-                    // Add image to document
+                    // Add the image to the PDF document
                     document.add(pdfImage)
                 }
             }
         }
     }
+
+    // Log completion and the path of the saved PDF
+    println("PDF conversion complete. File saved to: ${outputFile.absolutePath}")
+
+    // Clean up the temporary image files
+    imageFiles.forEach {
+        if (it.exists()) it.delete()
+    }
+
     return outputFile
 }
