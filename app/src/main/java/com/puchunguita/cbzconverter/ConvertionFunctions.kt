@@ -6,7 +6,6 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Environment
 import com.itextpdf.io.image.ImageDataFactory
-import com.itextpdf.io.source.ByteArrayOutputStream
 import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfWriter
 import com.itextpdf.layout.Document
@@ -14,6 +13,7 @@ import com.itextpdf.layout.element.Image
 import java.io.File
 import java.util.zip.ZipFile
 
+//TODO implement actual logger for kotlin, and replace all println with logger
 fun extractImagesFromCBZ(fileUri: Uri, context: Context): List<File> {
     val imageFiles = mutableListOf<File>()
     val inputStream = context.contentResolver.openInputStream(fileUri) ?: return imageFiles
@@ -82,9 +82,8 @@ fun convertToPDF(imageFiles: List<File>, context: Context): File {
     }
 
     // Define the output file for the PDF
+    // TODO need to adjust so name matches original name of file being converted
     val outputFile = File(downloadsFolder, "output.pdf")
-    // Define the output file for the PDF
-//    val outputFile = File(context.filesDir, "output.pdf")
 
     // Log the start of the PDF conversion process
     println("Starting PDF conversion...")

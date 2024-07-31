@@ -12,6 +12,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val context = getApplication<Application>().applicationContext
 
+    // TODO implement EPUB or remove all traces of it, if this is for manga might be best to remove fully
     fun convertToEPUB(fileUri: Uri) {
         CoroutineScope(Dispatchers.IO).launch {
             // Add your conversion logic here

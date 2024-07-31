@@ -41,32 +41,14 @@ class MainActivity : ComponentActivity() {
                         viewModel = MainViewModel(application),
                         modifier = Modifier.padding(innerPadding)
                     )
-//                    Greeting(
-//                        name = "Android",
-//                        modifier = Modifier.padding(innerPadding)
-//                    )
                 }
             }
         }
     }
 }
 
-//@Composable
-//fun Greeting(name: String, modifier: Modifier = Modifier) {
-//    Text(
-//        text = "Hello $name!",
-//        modifier = modifier
-//    )
-//}
-//
-//@Preview(showBackground = true)
-//@Composable
-//fun GreetingPreview() {
-//    CbzConverterTheme {
-//        Greeting("Android")
-//    }
-//}
-
+// TODO make UI/UX better, add progress text to know the conversion progress so user knows without logs.
+// TODO add toast to show user that completion is complete and where to find it and the name of file.
 @Composable
 fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
