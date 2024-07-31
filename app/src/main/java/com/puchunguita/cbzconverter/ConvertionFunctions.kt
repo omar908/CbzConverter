@@ -4,7 +4,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Environment
 import com.itextpdf.io.image.ImageDataFactory
+import com.itextpdf.io.source.ByteArrayOutputStream
 import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfWriter
 import com.itextpdf.layout.Document
@@ -74,7 +76,7 @@ fun extractImagesFromCBZ(fileUri: Uri, context: Context): List<File> {
 
 
 fun convertToPDF(imageFiles: List<File>, context: Context): File {
-    val downloadsFolder = File(context.getExternalFilesDir(null), "Downloads")
+    val downloadsFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
     if (!downloadsFolder.exists()) {
         downloadsFolder.mkdirs()
     }
@@ -102,17 +104,11 @@ fun convertToPDF(imageFiles: List<File>, context: Context): File {
                     // Add the image to the PDF document
                     document.add(pdfImage)
                 }
+                println("PDF conversion completed.")
             }
         }
     }
 
-    // Log completion and the path of the saved PDF
-    println("PDF conversion complete. File saved to: ${outputFile.absolutePath}")
-
-    // Clean up the temporary image files
-    imageFiles.forEach {
-        if (it.exists()) it.delete()
-    }
-
+    println("PDF saved to ${outputFile.absolutePath}")
     return outputFile
 }
