@@ -52,7 +52,7 @@ android {
 
 dependencies {
 
-    implementation("org.apache.pdfbox:pdfbox:2.0.29")
+    implementation("com.itextpdf:itext7-core:7.2.6")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
