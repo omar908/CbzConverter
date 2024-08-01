@@ -19,6 +19,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,9 +49,11 @@ class MainActivity : ComponentActivity() {
 }
 
 // TODO make UI/UX better, add progress text to know the conversion progress so user knows without logs.
-// TODO add toast to show user that completion is complete and where to find it and the name of file.
 @Composable
 fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
+    val isCurrentlyConverting by viewModel.isCurrentlyConverting.collectAsState()
+    val currentTaskStatus by viewModel.currentTaskStatus.collectAsState()
+
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
     var fileName by remember { mutableStateOf("No file selected") }
     val context = LocalContext.current
@@ -69,7 +72,12 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     ) {
         Text(text = fileName, modifier = Modifier.padding(bottom = 16.dp))
 
-        Button(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
+        Button(
+            onClick = {
+                filePickerLauncher.launch(arrayOf("*/*"))
+            },
+            enabled = !isCurrentlyConverting
+        ) {
             Text(text = "Select CBZ File")
         }
 
@@ -77,7 +85,7 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
 
         Button(
             onClick = { selectedFileUri?.let { viewModel.convertToEPUB(it) } },
-            enabled = selectedFileUri != null
+            enabled = selectedFileUri != null && !isCurrentlyConverting
         ) {
             Text(text = "Convert to EPUB")
         }
@@ -85,11 +93,20 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
-            onClick = { selectedFileUri?.let { viewModel.convertToPDF(it) } },
-            enabled = selectedFileUri != null
+            onClick = {
+                selectedFileUri?.let {
+                    viewModel.convertToPDF(it)
+                }
+            },
+            enabled = selectedFileUri != null && !isCurrentlyConverting
         ) {
             Text(text = "Convert to PDF")
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(text = "Current Task Status:")
+        Text(text = currentTaskStatus)
     }
 }
 
@@ -107,4 +124,12 @@ fun Uri.getFileName(context: Context): String {
         name = cursor.getString(nameIndex)
     }
     return name
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MainScreenPreview() {
+    CbzConverterTheme {
+        MainScreen(viewModel = MainViewModel(application = ComponentActivity().application))
+    }
 }
