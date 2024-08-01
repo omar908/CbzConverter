@@ -14,7 +14,7 @@ import java.io.File
 import java.util.logging.Logger
 import java.util.zip.ZipFile
 
-private val logger = Logger.getLogger("com.puchunguita.cbzconverter.CoversionFunction")
+private val logger = Logger.getLogger("com.puchunguita.cbzconverter.ConversionFunction")
 fun extractImagesFromCBZ(
     fileUri: Uri,
     context: Context,
@@ -31,21 +31,21 @@ fun extractImagesFromCBZ(
 
     // Open the CBZ file as a zip
     val zipFile = ZipFile(tempFile)
-    val fileHeaders = zipFile.entries()
+    val zipFileEntries = zipFile.entries()
 
     val batchSize = 10
     var counter = 0
 
-    while (fileHeaders.hasMoreElements()) {
+    while (zipFileEntries.hasMoreElements()) {
         val batchFiles = mutableListOf<File>()
 
         // Process files in batches of `batchSize`
         repeat(batchSize) {
-            if (!fileHeaders.hasMoreElements()) return@repeat // Exit loop if no more files
+            if (!zipFileEntries.hasMoreElements()) return@repeat // Exit loop if no more files
 
-            val fileHeader = fileHeaders.nextElement()
+            val zipFileEntry = zipFileEntries.nextElement()
             try {
-                val imageInputStream = zipFile.getInputStream(fileHeader)
+                val imageInputStream = zipFile.getInputStream(zipFileEntry)
                 // Use BitmapFactory.Options to reduce memory usage if needed
                 val options = BitmapFactory.Options().apply {
                     inScaled = false
@@ -63,14 +63,14 @@ fun extractImagesFromCBZ(
                 }
                 imageInputStream.close()
             } catch (e: Exception) {
-                logger.warning("ImageExtraction $e Error processing file ${fileHeader.name}")
+                logger.warning("ImageExtraction $e Error processing file ${zipFileEntry.name}")
             }
         }
 
         // Add batch of image files to the list
         imageFiles.addAll(batchFiles)
         counter += batchFiles.size
-        subStepStatusAction("Number of files already processed: $counter - number of files with data: ${imageFiles.size} - next item to process ${counter + 1}")
+        subStepStatusAction("Number of files already processed: $counter - Number of files with actual data: ${imageFiles.size} - Next batch amount to process $batchSize")
     }
 
     // Clean up temporary file
