@@ -26,6 +26,49 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentTaskStatus: MutableStateFlow<String> = MutableStateFlow<String>("Nothing Processing")
     val currentTaskStatus = _currentTaskStatus.asStateFlow()
 
+    private val _currentSubTaskStatus: MutableStateFlow<String> = MutableStateFlow<String>("Nothing Processing")
+    val currentSubTaskStatus = _currentSubTaskStatus.asStateFlow()
+
+    private fun convertCbzFileNameToPdfFileName(fileName: String) : String {
+        return fileName.replace(".cbz", ".pdf")
+    }
+
+    private fun toggleIsCurrentlyConverting(): Boolean {
+        _isCurrentlyConverting.update { currentState -> !currentState }
+        return _isCurrentlyConverting.value
+    }
+
+    private suspend fun updateConversionState() {
+        withContext(Dispatchers.Main) {
+            logger.info(if (toggleIsCurrentlyConverting()) "Conversion started" else "Conversion ended")
+        }
+    }
+
+    private suspend fun updateCurrentTaskStatusMessage(message: String, level: Level = Level.INFO) {
+        withContext(Dispatchers.Main) {
+            _currentTaskStatus.update { message }
+            logger.log(level, message)
+        }
+    }
+
+    private suspend fun updateCurrentSubTaskStatusStatusMessage(message: String) {
+        withContext(Dispatchers.Main) {
+            _currentSubTaskStatus.update { message }
+            logger.info(message)
+        }
+    }
+
+    private suspend fun showToastAndUpdateStatusMessage(
+        message: String,
+        toastLength: Int,
+        loggerLevel: Level = Level.INFO
+    ) {
+        updateCurrentTaskStatusMessage(message, loggerLevel)
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, message, toastLength).show()
+        }
+    }
+
     fun convertToPDF(fileUri: Uri) {
         CoroutineScope(Dispatchers.IO).launch {
             updateConversionState()
@@ -33,17 +76,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val originalCbzFileName = fileUri.getFileName(context);
                 val pdfFileName = convertCbzFileNameToPdfFileName(originalCbzFileName)
 
-                updateStatusMessage(message = "CBZ Extraction started")
+                updateCurrentTaskStatusMessage(message = "CBZ Extraction started")
                 val bitmaps = extractImagesFromCBZ(
                     fileUri = fileUri,
-                    context = context
+                    context = context,
+                    subStepStatusAction = { message: String ->
+                        CoroutineScope(Dispatchers.Main).launch {
+                            updateCurrentSubTaskStatusStatusMessage(message)
+                        }
+                    }
                 )
 
-                updateStatusMessage(message = "PDF Creation started")
+                updateCurrentTaskStatusMessage(message = "PDF Creation started")
                 val pdfFile = convertToPDF(
                     imageFiles = bitmaps,
                     context = context,
-                    outputFileName = pdfFileName
+                    outputFileName = pdfFileName,
+                    subStepStatusAction = { message: String ->
+                        CoroutineScope(Dispatchers.Main).launch {
+                            updateCurrentSubTaskStatusStatusMessage(message)
+                        }
+                    }
                 )
 
                 showToastAndUpdateStatusMessage(
@@ -62,38 +115,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun convertCbzFileNameToPdfFileName(fileName: String) : String {
-        return fileName.replace(".cbz", ".pdf")
-    }
 
-    private fun toggleIsCurrentlyConverting(): Boolean {
-        _isCurrentlyConverting.update { currentState -> !currentState }
-        return _isCurrentlyConverting.value
-    }
-
-    private suspend fun updateConversionState() {
-        withContext(Dispatchers.Main) {
-            logger.info(if (toggleIsCurrentlyConverting()) "Conversion started" else "Conversion ended")
-        }
-    }
-
-    private suspend fun updateStatusMessage(message: String, level: Level = Level.INFO) {
-        withContext(Dispatchers.Main) {
-            _currentTaskStatus.update { message }
-            logger.log(level, message)
-        }
-    }
-
-    private suspend fun showToastAndUpdateStatusMessage(
-        message: String,
-        toastLength: Int,
-        loggerLevel: Level = Level.INFO
-    ) {
-        updateStatusMessage(message, loggerLevel)
-        withContext(Dispatchers.Main) {
-            Toast.makeText(context, message, toastLength).show()
-        }
-    }
 
 
 }

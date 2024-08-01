@@ -53,6 +53,7 @@ class MainActivity : ComponentActivity() {
 fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     val isCurrentlyConverting by viewModel.isCurrentlyConverting.collectAsState()
     val currentTaskStatus by viewModel.currentTaskStatus.collectAsState()
+    val currentSubTaskStatus by viewModel.currentSubTaskStatus.collectAsState()
 
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
     var fileName by remember { mutableStateOf("No file selected") }
@@ -98,6 +99,11 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
 
         Text(text = "Current Task Status:")
         Text(text = currentTaskStatus)
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(text = "Current Sub-Task Status:")
+        Text(text = currentSubTaskStatus)
     }
 }
 

@@ -75,6 +75,7 @@ fun extractImagesFromCBZ(
 
     // Clean up temporary file
     tempFile.delete()
+    subStepStatusAction("Deleted temporary files")
 
     return imageFiles
 }
