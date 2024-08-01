@@ -26,26 +26,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentTaskStatus: MutableStateFlow<String> = MutableStateFlow<String>("Nothing Processing")
     val currentTaskStatus = _currentTaskStatus.asStateFlow()
 
-
-    // TODO implement EPUB or remove all traces of it, if this is for manga might be best to remove fully
-    fun convertToEPUB(fileUri: Uri) {
-        CoroutineScope(Dispatchers.IO).launch {
-            // Add your conversion logic here
-            withContext(Dispatchers.Main) {
-                // Update UI after conversion if needed
-            }
-        }
-    }
-
     fun convertToPDF(fileUri: Uri) {
         CoroutineScope(Dispatchers.IO).launch {
             updateConversionState()
             try {
+                val originalCbzFileName = fileUri.getFileName(context);
+                val pdfFileName = convertCbzFileNameToPdfFileName(originalCbzFileName)
+
                 updateStatusMessage(message = "CBZ Extraction started")
-                val bitmaps = extractImagesFromCBZ(fileUri, context)
+                val bitmaps = extractImagesFromCBZ(
+                    fileUri = fileUri,
+                    context = context
+                )
 
                 updateStatusMessage(message = "PDF Creation started")
-                val pdfFile = convertToPDF(bitmaps, context)
+                val pdfFile = convertToPDF(
+                    imageFiles = bitmaps,
+                    context = context,
+                    outputFileName = pdfFileName
+                )
 
                 showToastAndUpdateStatusMessage(
                     message = "PDF created: ${pdfFile.absolutePath}",
@@ -56,11 +55,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     message = "Conversion failed: ${e.message}",
                     toastLength = Toast.LENGTH_LONG, Level.WARNING
                 )
-                logger.warning("Conversion failed stacktrace: ${e.stackTrace}")
+                logger.warning("Conversion failed stacktrace: ${e.stackTrace.contentToString()}")
             } finally {
                 updateConversionState()
             }
         }
+    }
+
+    private fun convertCbzFileNameToPdfFileName(fileName: String) : String {
+        return fileName.replace(".cbz", ".pdf")
     }
 
     private fun toggleIsCurrentlyConverting(): Boolean {

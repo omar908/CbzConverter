@@ -11,10 +11,15 @@ import com.itextpdf.kernel.pdf.PdfWriter
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.Image
 import java.io.File
+import java.util.logging.Logger
 import java.util.zip.ZipFile
 
-//TODO implement actual logger for kotlin, and replace all println with logger
-fun extractImagesFromCBZ(fileUri: Uri, context: Context): List<File> {
+private val logger = Logger.getLogger("com.puchunguita.cbzconverter.CoversionFunction")
+fun extractImagesFromCBZ(
+    fileUri: Uri,
+    context: Context,
+    subStepStatusAction: (String) -> Unit = { status -> logger.info(status) }
+): List<File> {
     val imageFiles = mutableListOf<File>()
     val inputStream = context.contentResolver.openInputStream(fileUri) ?: return imageFiles
 
@@ -58,14 +63,14 @@ fun extractImagesFromCBZ(fileUri: Uri, context: Context): List<File> {
                 }
                 imageInputStream.close()
             } catch (e: Exception) {
-                println("ImageExtraction $e Error processing file ${fileHeader.name}")
+                logger.warning("ImageExtraction $e Error processing file ${fileHeader.name}")
             }
         }
 
         // Add batch of image files to the list
         imageFiles.addAll(batchFiles)
         counter += batchFiles.size
-        println("Number of files already processed: $counter - number of files with data: ${imageFiles.size} - next item to process ${counter + 1}")
+        subStepStatusAction("Number of files already processed: $counter - number of files with data: ${imageFiles.size} - next item to process ${counter + 1}")
     }
 
     // Clean up temporary file
@@ -75,18 +80,22 @@ fun extractImagesFromCBZ(fileUri: Uri, context: Context): List<File> {
 }
 
 
-fun convertToPDF(imageFiles: List<File>, context: Context): File {
+fun convertToPDF(
+    imageFiles: List<File>,
+    context: Context,
+    subStepStatusAction: (String) -> Unit = { status -> logger.info(status) },
+    outputFileName: String = "output.pdf"
+): File {
     val downloadsFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
     if (!downloadsFolder.exists()) {
         downloadsFolder.mkdirs()
     }
 
     // Define the output file for the PDF
-    // TODO need to adjust so name matches original name of file being converted
-    val outputFile = File(downloadsFolder, "output.pdf")
+    val outputFile = File(downloadsFolder, outputFileName)
 
     // Log the start of the PDF conversion process
-    println("Starting PDF conversion...")
+    subStepStatusAction("Starting PDF conversion...")
 
     // Create the PdfWriter and PdfDocument
     PdfWriter(outputFile.absolutePath).use { writer ->
@@ -94,7 +103,7 @@ fun convertToPDF(imageFiles: List<File>, context: Context): File {
             Document(pdfDoc).use { document ->
                 // Loop through each image file and add it to the PDF
                 for ((index, imageFile) in imageFiles.withIndex()) {
-                    println("Processing image file ${index + 1} of ${imageFiles.size}: ${imageFile.absolutePath}")
+                    subStepStatusAction("Processing image file ${index + 1} of ${imageFiles.size}: ${imageFile.absolutePath}")
 
                     // Convert the image file to iText image
                     val imageData = ImageDataFactory.create(imageFile.absolutePath)
@@ -103,11 +112,11 @@ fun convertToPDF(imageFiles: List<File>, context: Context): File {
                     // Add the image to the PDF document
                     document.add(pdfImage)
                 }
-                println("PDF conversion completed.")
+                subStepStatusAction("PDF conversion completed.")
             }
         }
     }
 
-    println("PDF saved to ${outputFile.absolutePath}")
+    subStepStatusAction("PDF saved to ${outputFile.absolutePath}")
     return outputFile
 }

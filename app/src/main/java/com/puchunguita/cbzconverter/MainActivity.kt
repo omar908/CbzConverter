@@ -84,15 +84,6 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
-            onClick = { selectedFileUri?.let { viewModel.convertToEPUB(it) } },
-            enabled = selectedFileUri != null && !isCurrentlyConverting
-        ) {
-            Text(text = "Convert to EPUB")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
             onClick = {
                 selectedFileUri?.let {
                     viewModel.convertToPDF(it)
