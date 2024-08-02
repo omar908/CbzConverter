@@ -74,7 +74,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun convertToPDF(fileUri: Uri, batchSize: Int = 10) {
+    fun convertToPDF(fileUri: Uri, batchSize: Int = 10, maxNumberOfPages: Int = 100) {
         CoroutineScope(Dispatchers.IO).launch {
             updateConversionState()
             try {
@@ -95,7 +95,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
 
                 updateCurrentTaskStatusMessage(message = "PDF Creation started")
-                val pdfFile = convertToPDF(
+                val pdfFiles = convertToPDF(
                     imageFiles = bitmaps,
                     context = context,
                     outputFileName = pdfFileName,
@@ -103,11 +103,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         CoroutineScope(Dispatchers.Main).launch {
                             updateCurrentSubTaskStatusStatusMessage(message)
                         }
-                    }
+                    },
+                    maxNumberOfPages = maxNumberOfPages
                 )
 
+                //TODO update to make more sense if multiple PDFs are created
                 showToastAndUpdateStatusMessage(
-                    message = "PDF created: ${pdfFile.absolutePath}",
+                    message = "PDF created: ${pdfFiles.first().absolutePath}",
                     toastLength = Toast.LENGTH_LONG
                 )
             } catch (e: Exception) {

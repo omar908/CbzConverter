@@ -12,7 +12,9 @@ import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.Image
 import java.io.File
 import java.util.logging.Logger
+import java.util.stream.IntStream
 import java.util.zip.ZipFile
+import kotlin.math.ceil
 
 private val logger = Logger.getLogger("com.puchunguita.cbzconverter.ConversionFunction")
 fun extractImagesFromCBZ(
@@ -85,39 +87,81 @@ fun convertToPDF(
     imageFiles: List<File>,
     context: Context,
     subStepStatusAction: (String) -> Unit = { status -> logger.info(status) },
-    outputFileName: String = "output.pdf"
-): File {
+    outputFileName: String = "output.pdf",
+    maxNumberOfPages: Int = 100
+): List<File> {
+    // Log the start of the PDF conversion process
+    subStepStatusAction("Starting PDF conversion...")
+
     val downloadsFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
     if (!downloadsFolder.exists()) {
         downloadsFolder.mkdirs()
     }
-
+    val outputFiles = mutableListOf<File>()
+    var amountOfFilesToExport = 1
+    //TODO add error handling to default to the max number of pages to totalNumberOfImages, if maxNumberOfPages is greater than totalNumberOfImages
+    val totalNumberOfImages: Int = imageFiles.size
     // Define the output file for the PDF
-    val outputFile = File(downloadsFolder, outputFileName)
+    var outputFile = File(downloadsFolder, outputFileName)
 
-    // Log the start of the PDF conversion process
-    subStepStatusAction("Starting PDF conversion...")
 
-    // Create the PdfWriter and PdfDocument
-    PdfWriter(outputFile.absolutePath).use { writer ->
-        PdfDocument(writer).use { pdfDoc ->
-            Document(pdfDoc).use { document ->
-                // Loop through each image file and add it to the PDF
-                for ((index, imageFile) in imageFiles.withIndex()) {
-                    subStepStatusAction("Processing image file ${index + 1} of ${imageFiles.size}: ${imageFile.absolutePath}")
+    if (totalNumberOfImages > maxNumberOfPages) {
+        amountOfFilesToExport = ceil(totalNumberOfImages.toDouble() / maxNumberOfPages).toInt()
 
-                    // Convert the image file to iText image
-                    val imageData = ImageDataFactory.create(imageFile.absolutePath)
-                    val pdfImage = Image(imageData)
+        IntStream.range(0, amountOfFilesToExport).forEach { index ->
+            val newOutputFileName = outputFileName.replace(".pdf", "_part-${index+1}.pdf")
+            outputFile = File(downloadsFolder, newOutputFileName)
+            val startIndex = index.times(maxNumberOfPages)
+            val nextPossibleEndIndex = index.plus(1).times(maxNumberOfPages)
+            val endIndex = if (nextPossibleEndIndex > totalNumberOfImages) totalNumberOfImages else nextPossibleEndIndex
+            val imagesToProcess = imageFiles.subList(startIndex, endIndex)
 
-                    // Add the image to the PDF document
-                    document.add(pdfImage)
+            //TODO Extract duplicate code for creating PDF file
+
+            // Create the PdfWriter and PdfDocument
+            PdfWriter(outputFile.absolutePath).use { writer ->
+                PdfDocument(writer).use { pdfDoc ->
+                    Document(pdfDoc).use { document ->
+                        // Loop through each image file and add it to the PDF
+                        for ((currentImageIndex, imageFile) in imagesToProcess.withIndex()) {
+                            subStepStatusAction("Processing part ${index + 1} of $amountOfFilesToExport - Processing image file ${index.times(maxNumberOfPages) + currentImageIndex + 1} of ${imageFiles.size}: ${imageFile.absolutePath}")
+
+                            // Convert the image file to iText image
+                            val imageData = ImageDataFactory.create(imageFile.absolutePath)
+                            val pdfImage = Image(imageData)
+
+                            // Add the image to the PDF document
+                            document.add(pdfImage)
+                        }
+                        subStepStatusAction("PDF conversion completed.")
+                    }
                 }
-                subStepStatusAction("PDF conversion completed.")
+            }
+            outputFiles.add(outputFile)
+        }
+    } else {
+        // Create the PdfWriter and PdfDocument
+        PdfWriter(outputFile.absolutePath).use { writer ->
+            PdfDocument(writer).use { pdfDoc ->
+                Document(pdfDoc).use { document ->
+                    // Loop through each image file and add it to the PDF
+                    for ((index, imageFile) in imageFiles.withIndex()) {
+                        subStepStatusAction("Processing image file ${index + 1} of ${imageFiles.size}: ${imageFile.absolutePath}")
+
+                        // Convert the image file to iText image
+                        val imageData = ImageDataFactory.create(imageFile.absolutePath)
+                        val pdfImage = Image(imageData)
+
+                        // Add the image to the PDF document
+                        document.add(pdfImage)
+                    }
+                    subStepStatusAction("PDF conversion completed.")
+                }
             }
         }
+        outputFiles.add(outputFile)
     }
 
-    subStepStatusAction("PDF saved to ${outputFile.absolutePath}")
-    return outputFile
+    subStepStatusAction("PDF saved to ${outputFiles.first().absolutePath}")
+    return outputFiles
 }
