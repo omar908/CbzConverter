@@ -16,6 +16,11 @@ import java.util.logging.Level
 import java.util.logging.Logger
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
+
+    companion object {
+        private const val NOTHING_PROCESSING = "Nothing Processing"
+    }
+
     @SuppressLint("StaticFieldLeak")
     private val context = getApplication<Application>().applicationContext
     private val logger = Logger.getLogger(MainViewModel::class.java.name)
@@ -23,10 +28,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _isCurrentlyConverting: MutableStateFlow<Boolean> = MutableStateFlow<Boolean>(false)
     val isCurrentlyConverting = _isCurrentlyConverting.asStateFlow()
 
-    private val _currentTaskStatus: MutableStateFlow<String> = MutableStateFlow<String>("Nothing Processing")
+    private val _currentTaskStatus: MutableStateFlow<String> = MutableStateFlow<String>(Companion.NOTHING_PROCESSING)
     val currentTaskStatus = _currentTaskStatus.asStateFlow()
 
-    private val _currentSubTaskStatus: MutableStateFlow<String> = MutableStateFlow<String>("Nothing Processing")
+    private val _currentSubTaskStatus: MutableStateFlow<String> = MutableStateFlow<String>(Companion.NOTHING_PROCESSING)
     val currentSubTaskStatus = _currentSubTaskStatus.asStateFlow()
 
     private fun convertCbzFileNameToPdfFileName(fileName: String) : String {
@@ -69,7 +74,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun convertToPDF(fileUri: Uri) {
+    fun convertToPDF(fileUri: Uri, batchSize: Int = 10) {
         CoroutineScope(Dispatchers.IO).launch {
             updateConversionState()
             try {
@@ -77,6 +82,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val pdfFileName = convertCbzFileNameToPdfFileName(originalCbzFileName)
 
                 updateCurrentTaskStatusMessage(message = "CBZ Extraction started")
+                updateCurrentSubTaskStatusStatusMessage(message = "Processing first batch of $batchSize")
                 val bitmaps = extractImagesFromCBZ(
                     fileUri = fileUri,
                     context = context,
@@ -84,7 +90,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         CoroutineScope(Dispatchers.Main).launch {
                             updateCurrentSubTaskStatusStatusMessage(message)
                         }
-                    }
+                    },
+                    batchSize = batchSize
                 )
 
                 updateCurrentTaskStatusMessage(message = "PDF Creation started")

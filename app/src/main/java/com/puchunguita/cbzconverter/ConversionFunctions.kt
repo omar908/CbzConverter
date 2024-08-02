@@ -18,7 +18,8 @@ private val logger = Logger.getLogger("com.puchunguita.cbzconverter.ConversionFu
 fun extractImagesFromCBZ(
     fileUri: Uri,
     context: Context,
-    subStepStatusAction: (String) -> Unit = { status -> logger.info(status) }
+    subStepStatusAction: (String) -> Unit = { status -> logger.info(status) },
+    batchSize: Int = 10
 ): List<File> {
     val imageFiles = mutableListOf<File>()
     val inputStream = context.contentResolver.openInputStream(fileUri) ?: return imageFiles
@@ -33,7 +34,6 @@ fun extractImagesFromCBZ(
     val zipFile = ZipFile(tempFile)
     val zipFileEntries = zipFile.entries()
 
-    val batchSize = 10
     var counter = 0
 
     while (zipFileEntries.hasMoreElements()) {
