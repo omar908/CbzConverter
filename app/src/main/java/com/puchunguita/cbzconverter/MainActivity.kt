@@ -145,8 +145,21 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(text = "Batch Size:")
-        Text(text = batchSize.toString())
+        Text(text = "Batch Size: $batchSize \n (The higher number the more memory intensive, recommend 10)")
+        var tempBatchSize by remember { mutableStateOf(batchSize.toString()) }
+
+        TextField(
+            value = tempBatchSize,
+            onValueChange = { tempBatchSize = it },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            keyboardActions = KeyboardActions(onDone = {
+                viewModel.updateBatchSizeFromUserInput(tempBatchSize)
+                focusManager.clearFocus()
+            }),
+            label = { Text("Update Batch Size Value") },
+            enabled = !isCurrentlyConverting,
+            singleLine = true
+        )
     }
 }
 

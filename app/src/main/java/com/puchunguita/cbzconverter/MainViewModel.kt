@@ -111,7 +111,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun convertToPDF(fileUri: Uri, batchSize: Int = 10) {
+    fun convertToPDF(fileUri: Uri) {
         CoroutineScope(Dispatchers.IO).launch {
             updateConversionState()
             try {
@@ -119,7 +119,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val pdfFileName = convertCbzFileNameToPdfFileName(originalCbzFileName)
 
                 updateCurrentTaskStatusMessageSuspend(message = "CBZ Extraction started")
-                updateCurrentSubTaskStatusStatusMessage(message = "Processing first batch of $batchSize")
+                updateCurrentSubTaskStatusStatusMessage(message = "Processing first batch of ${batchSize.value}")
                 val bitmaps = extractImagesFromCBZ(
                     fileUri = fileUri,
                     context = context,
@@ -128,7 +128,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             updateCurrentSubTaskStatusStatusMessage(message)
                         }
                     },
-                    batchSize = batchSize
+                    batchSize = _batchSize.value
                 )
 
                 updateCurrentTaskStatusMessageSuspend(message = "PDF Creation started")
