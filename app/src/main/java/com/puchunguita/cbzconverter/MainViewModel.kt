@@ -34,6 +34,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentSubTaskStatus: MutableStateFlow<String> = MutableStateFlow<String>(Companion.NOTHING_PROCESSING)
     val currentSubTaskStatus = _currentSubTaskStatus.asStateFlow()
 
+    private val _batchSize: MutableStateFlow<Int> = MutableStateFlow<Int>(10)
+    val batchSize = _batchSize.asStateFlow()
+
+    private val _maxNumberOfPages: MutableStateFlow<Int> = MutableStateFlow<Int>(100)
+    val maxNumberOfPages = _maxNumberOfPages.asStateFlow()
+
     private fun convertCbzFileNameToPdfFileName(fileName: String) : String {
         return fileName.replace(".cbz", ".pdf")
     }
@@ -49,11 +55,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun updateCurrentTaskStatusMessage(message: String, level: Level = Level.INFO) {
+    private suspend fun updateCurrentTaskStatusMessageSuspend(message: String, level: Level = Level.INFO) {
         withContext(Dispatchers.Main) {
-            _currentTaskStatus.update { message }
+            updateCurrentTaskStatusMessage(message)
             logger.log(level, message)
         }
+    }
+
+    private fun updateCurrentTaskStatusMessage(message: String) {
+            _currentTaskStatus.update { message }
     }
 
     private suspend fun updateCurrentSubTaskStatusStatusMessage(message: String) {
@@ -63,25 +73,52 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun updateMaxNumberOfPages(batchSize: Int) {
+        _maxNumberOfPages.update { batchSize }
+    }
+
+    fun updateMaxNumberOfPagesSizeFromUserInput(maxNumberOfPages: String) {
+        try {
+            updateMaxNumberOfPages(maxNumberOfPages.trim().toInt())
+            updateCurrentTaskStatusMessage("Updated maxNumberOfPages size: $maxNumberOfPages")
+        } catch (e: Exception) {
+            updateCurrentTaskStatusMessage("Invalid maxNumberOfPages size: $maxNumberOfPages reverting to default value")
+            updateMaxNumberOfPages(10)
+        }
+    }
+
+    private fun updateBatchSize(batchSize: Int) {
+        _batchSize.update { batchSize }
+    }
+
+    fun updateBatchSizeFromUserInput(batchSize: String) {
+        try {
+            updateBatchSize(batchSize.toInt())
+        } catch (e: Exception) {
+            updateCurrentTaskStatusMessage("Invalid batch size: $batchSize reverting to default value")
+            updateBatchSize(10)
+        }
+    }
+
     private suspend fun showToastAndUpdateStatusMessage(
         message: String,
         toastLength: Int,
         loggerLevel: Level = Level.INFO
     ) {
-        updateCurrentTaskStatusMessage(message, loggerLevel)
+        updateCurrentTaskStatusMessageSuspend(message, loggerLevel)
         withContext(Dispatchers.Main) {
             Toast.makeText(context, message, toastLength).show()
         }
     }
 
-    fun convertToPDF(fileUri: Uri, batchSize: Int = 10, maxNumberOfPages: Int = 100) {
+    fun convertToPDF(fileUri: Uri, batchSize: Int = 10) {
         CoroutineScope(Dispatchers.IO).launch {
             updateConversionState()
             try {
                 val originalCbzFileName = fileUri.getFileName(context);
                 val pdfFileName = convertCbzFileNameToPdfFileName(originalCbzFileName)
 
-                updateCurrentTaskStatusMessage(message = "CBZ Extraction started")
+                updateCurrentTaskStatusMessageSuspend(message = "CBZ Extraction started")
                 updateCurrentSubTaskStatusStatusMessage(message = "Processing first batch of $batchSize")
                 val bitmaps = extractImagesFromCBZ(
                     fileUri = fileUri,
@@ -94,7 +131,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     batchSize = batchSize
                 )
 
-                updateCurrentTaskStatusMessage(message = "PDF Creation started")
+                updateCurrentTaskStatusMessageSuspend(message = "PDF Creation started")
                 val pdfFiles = convertToPDF(
                     imageFiles = bitmaps,
                     context = context,
@@ -104,7 +141,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             updateCurrentSubTaskStatusStatusMessage(message)
                         }
                     },
-                    maxNumberOfPages = maxNumberOfPages
+                    maxNumberOfPages = _maxNumberOfPages.value
                 )
 
                 //TODO update to make more sense if multiple PDFs are created
