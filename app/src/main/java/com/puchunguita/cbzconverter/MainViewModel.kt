@@ -120,7 +120,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 updateCurrentTaskStatusMessageSuspend(message = "CBZ Extraction started")
                 updateCurrentSubTaskStatusStatusMessage(message = "Processing first batch of ${batchSize.value}")
-                val bitmaps = extractImagesFromCBZ(
+                val pdfFiles = convertCbzToPDF(
                     fileUri = fileUri,
                     context = context,
                     subStepStatusAction = { message: String ->
@@ -128,20 +128,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             updateCurrentSubTaskStatusStatusMessage(message)
                         }
                     },
-                    batchSize = _batchSize.value
-                )
-
-                updateCurrentTaskStatusMessageSuspend(message = "PDF Creation started")
-                val pdfFiles = convertToPDF(
-                    imageFiles = bitmaps,
-                    context = context,
-                    outputFileName = pdfFileName,
-                    subStepStatusAction = { message: String ->
-                        CoroutineScope(Dispatchers.Main).launch {
-                            updateCurrentSubTaskStatusStatusMessage(message)
-                        }
-                    },
-                    maxNumberOfPages = _maxNumberOfPages.value
+                    maxNumberOfPages = _maxNumberOfPages.value,
+                    outputFileName = pdfFileName
                 )
 
                 //TODO update to make more sense if multiple PDFs are created
