@@ -12,6 +12,7 @@ import java.io.File
 import java.io.InputStream
 import java.util.logging.Logger
 import java.util.stream.IntStream
+import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import kotlin.math.ceil
 
@@ -23,8 +24,8 @@ fun convertCbzToPDF(
     maxNumberOfPages: Int = 100,
     outputFileName: String = "output.pdf"
 ): List<File> {
-    val imageFiles = mutableListOf<File>()
-    val inputStream = context.contentResolver.openInputStream(fileUri) ?: return imageFiles
+    //TODO add check when returning to add context to user if files was not able to be retrieved.
+    val inputStream = context.contentResolver.openInputStream(fileUri) ?: return mutableListOf<File>()
 
     // Copy the CBZ file to a temporary location
     val tempFile = File(context.cacheDir, "temp.cbz")
@@ -63,21 +64,13 @@ fun convertCbzToPDF(
                 PdfDocument(writer).use { pdfDoc ->
                     Document(pdfDoc).use { document ->
                         for ((currentImageIndex, imageFile) in imagesToProcess.withIndex()) {
-                            subStepStatusAction("Processing part ${index + 1} of $amountOfFilesToExport - Processing image file ${index.times(maxNumberOfPages) + currentImageIndex + 1} of ${imageFiles.size}")
-                            val imageInputStream: InputStream
-                            try {
-                                imageInputStream = zipFile.getInputStream(imageFile)
-
-                                val imageFileByteArray = imageInputStream.readBytes()
-                                val imageData = ImageDataFactory.create(imageFileByteArray)
-                                val pdfImage = Image(imageData)
-
-                                // Add the image to the PDF document
-                                document.add(pdfImage)
-                                imageInputStream.close()
-                            } catch (e: Exception) {
-                                logger.warning("ImageExtraction $e Error processing file ${imageFile.name}")
-                            }
+                            subStepStatusAction(
+                                "Processing part ${index + 1} of $amountOfFilesToExport " +
+                                        "- Processing image file " +
+                                        "${index.times(maxNumberOfPages) + currentImageIndex + 1} " +
+                                        "of $totalNumberOfImages"
+                            )
+                            extractImageAndAddToPDFDocument(zipFile, imageFile, document)
                         }
                     }
                 }
@@ -91,23 +84,16 @@ fun convertCbzToPDF(
         PdfWriter(outputFile.absolutePath).use { writer ->
             PdfDocument(writer).use { pdfDoc ->
                 Document(pdfDoc).use { document ->
+                    // Counter used for logging the progress only
+                    var counter = 1
                     while (zipFileEntries.hasMoreElements()) {
-                        val zipFileEntry = zipFileEntries.nextElement()
-                        val imageInputStream: InputStream
-
-                        try {
-                            imageInputStream = zipFile.getInputStream(zipFileEntry)
-
-                            val imageFileByteArray = imageInputStream.readBytes()
-                            val imageData = ImageDataFactory.create(imageFileByteArray)
-                            val pdfImage = Image(imageData)
-
-                            // Add the image to the PDF document
-                            document.add(pdfImage)
-                            imageInputStream.close()
-                        } catch (e: Exception) {
-                            logger.warning("ImageExtraction $e Error processing file ${zipFileEntry.name}")
-                        }
+                        subStepStatusAction(
+                            "Processing image file " +
+                                    "$counter " +
+                                    "of $totalNumberOfImages"
+                        )
+                        extractImageAndAddToPDFDocument(zipFile, zipFileEntries.nextElement(), document)
+                        counter++
                     }
                 }
             }
@@ -117,4 +103,26 @@ fun convertCbzToPDF(
 
     zipFile.close()
     return outputFiles
+}
+
+private fun extractImageAndAddToPDFDocument(
+    zipFile: ZipFile,
+    zipFileEntry: ZipEntry,
+    document: Document
+) {
+    val imageInputStream: InputStream
+
+    try {
+        imageInputStream = zipFile.getInputStream(zipFileEntry)
+
+        val imageFileByteArray = imageInputStream.readBytes()
+        val imageData = ImageDataFactory.create(imageFileByteArray)
+        val pdfImage = Image(imageData)
+
+        // Add the image to the PDF document
+        document.add(pdfImage)
+        imageInputStream.close()
+    } catch (e: Exception) {
+        logger.warning("ImageExtraction $e Error processing file ${zipFileEntry.name}")
+    }
 }

@@ -62,7 +62,6 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     val isCurrentlyConverting by viewModel.isCurrentlyConverting.collectAsState()
     val currentTaskStatus by viewModel.currentTaskStatus.collectAsState()
     val currentSubTaskStatus by viewModel.currentSubTaskStatus.collectAsState()
-    val batchSize by viewModel.batchSize.collectAsState()
     val maxNumberOfPages by viewModel.maxNumberOfPages.collectAsState()
 
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
@@ -139,24 +138,6 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                 focusManager.clearFocus()
             }),
             label = { Text("Update Max Number of Pages per PDF") },
-            enabled = !isCurrentlyConverting,
-            singleLine = true
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(text = "Batch Size: $batchSize \n (The higher number the more memory intensive, recommend 10)")
-        var tempBatchSize by remember { mutableStateOf(batchSize.toString()) }
-
-        TextField(
-            value = tempBatchSize,
-            onValueChange = { tempBatchSize = it },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            keyboardActions = KeyboardActions(onDone = {
-                viewModel.updateBatchSizeFromUserInput(tempBatchSize)
-                focusManager.clearFocus()
-            }),
-            label = { Text("Update Batch Size Value") },
             enabled = !isCurrentlyConverting,
             singleLine = true
         )

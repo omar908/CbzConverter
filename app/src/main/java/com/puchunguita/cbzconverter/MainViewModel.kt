@@ -34,9 +34,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentSubTaskStatus: MutableStateFlow<String> = MutableStateFlow<String>(Companion.NOTHING_PROCESSING)
     val currentSubTaskStatus = _currentSubTaskStatus.asStateFlow()
 
-    private val _batchSize: MutableStateFlow<Int> = MutableStateFlow<Int>(10)
-    val batchSize = _batchSize.asStateFlow()
-
     private val _maxNumberOfPages: MutableStateFlow<Int> = MutableStateFlow<Int>(100)
     val maxNumberOfPages = _maxNumberOfPages.asStateFlow()
 
@@ -73,8 +70,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun updateMaxNumberOfPages(batchSize: Int) {
-        _maxNumberOfPages.update { batchSize }
+    private fun updateMaxNumberOfPages(maxNumberOfPages: Int) {
+        _maxNumberOfPages.update { maxNumberOfPages }
     }
 
     fun updateMaxNumberOfPagesSizeFromUserInput(maxNumberOfPages: String) {
@@ -84,19 +81,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         } catch (e: Exception) {
             updateCurrentTaskStatusMessage("Invalid maxNumberOfPages size: $maxNumberOfPages reverting to default value")
             updateMaxNumberOfPages(10)
-        }
-    }
-
-    private fun updateBatchSize(batchSize: Int) {
-        _batchSize.update { batchSize }
-    }
-
-    fun updateBatchSizeFromUserInput(batchSize: String) {
-        try {
-            updateBatchSize(batchSize.toInt())
-        } catch (e: Exception) {
-            updateCurrentTaskStatusMessage("Invalid batch size: $batchSize reverting to default value")
-            updateBatchSize(10)
         }
     }
 
@@ -118,8 +102,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val originalCbzFileName = fileUri.getFileName(context);
                 val pdfFileName = convertCbzFileNameToPdfFileName(originalCbzFileName)
 
-                updateCurrentTaskStatusMessageSuspend(message = "CBZ Extraction started")
-                updateCurrentSubTaskStatusStatusMessage(message = "Processing first batch of ${batchSize.value}")
+                updateCurrentTaskStatusMessageSuspend(message = "Conversion from CBZ to PDF started")
                 val pdfFiles = convertCbzToPDF(
                     fileUri = fileUri,
                     context = context,
