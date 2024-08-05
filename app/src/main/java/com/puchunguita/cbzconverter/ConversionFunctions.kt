@@ -24,7 +24,6 @@ fun convertCbzToPDF(
     maxNumberOfPages: Int = 100,
     outputFileName: String = "output.pdf"
 ): List<File> {
-    //TODO add check when returning to add context to user if files was not able to be retrieved.
     val inputStream = context.contentResolver.openInputStream(fileUri) ?: return mutableListOf<File>()
 
     // Copy the CBZ file to a temporary location

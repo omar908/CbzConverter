@@ -114,12 +114,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     maxNumberOfPages = _maxNumberOfPages.value,
                     outputFileName = pdfFileName
                 )
-
-                //TODO update to make more sense if multiple PDFs are created
-                showToastAndUpdateStatusMessage(
-                    message = "PDF created: ${pdfFiles.first().absolutePath}",
-                    toastLength = Toast.LENGTH_LONG
-                )
+                if (pdfFiles.isEmpty()) {
+                    throw Exception("No PDF files created, CBZ file is invalid or empty")
+                } else {
+                    val message = if (pdfFiles.size == 1) "PDF created: ${pdfFiles.first().absolutePath}"
+                        else "Multiple PDFs created: ${pdfFiles.joinToString { it.absolutePath }}"
+                    showToastAndUpdateStatusMessage(
+                        message = message,
+                        toastLength = Toast.LENGTH_LONG
+                    )
+                }
             } catch (e: Exception) {
                 showToastAndUpdateStatusMessage(
                     message = "Conversion failed: ${e.message}",
