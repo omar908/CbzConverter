@@ -44,9 +44,7 @@ fun convertCbzToPDF(
     }
     val outputFiles = mutableListOf<File>()
     var amountOfFilesToExport = 1
-    //TODO add error handling to default to the max number of pages to totalNumberOfImages, if maxNumberOfPages is greater than totalNumberOfImages
     var outputFile = File(downloadsFolder, outputFileName)
-
 
     if (totalNumberOfImages > maxNumberOfPages) {
         amountOfFilesToExport = ceil(totalNumberOfImages.toDouble() / maxNumberOfPages).toInt()

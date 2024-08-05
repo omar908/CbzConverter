@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
@@ -56,7 +57,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// TODO make UI/UX better, add progress text to know the conversion progress so user knows without logs.
 @Composable
 fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     val isCurrentlyConverting by viewModel.isCurrentlyConverting.collectAsState()
@@ -124,11 +124,10 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(text = "Max Number of Pages per PDF: $maxNumberOfPages")
-        Text(text = "Value updates upon clicking Done (✓) on keyboard")
+        Spacer(modifier = Modifier.height(16.dp))
         val focusManager: FocusManager = LocalFocusManager.current
 
         var tempMaxNumberOfPages by remember { mutableStateOf(maxNumberOfPages.toString()) }
-
         TextField(
             value = tempMaxNumberOfPages,
             onValueChange = { tempMaxNumberOfPages = it },
@@ -137,10 +136,17 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
                 viewModel.updateMaxNumberOfPagesSizeFromUserInput(tempMaxNumberOfPages)
                 focusManager.clearFocus()
             }),
-            label = { Text("Update Max Number of Pages per PDF") },
+            label = {
+                if (!maxNumberOfPages.toString().contentEquals(tempMaxNumberOfPages)) {
+                    Text(text = "Value not saved, click Done (✓) on keyboard", color = Color.Red)
+                } else {
+                    Text("Update Max Number of Pages per PDF")
+                }
+            },
             enabled = !isCurrentlyConverting,
             singleLine = true
         )
+
     }
 }
 
