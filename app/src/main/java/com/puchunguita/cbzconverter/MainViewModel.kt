@@ -118,7 +118,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     throw Exception("No PDF files created, CBZ file is invalid or empty")
                 } else {
                     val message = if (pdfFiles.size == 1) "PDF created: ${pdfFiles.first().absolutePath}"
-                        else "Multiple PDFs created: ${pdfFiles.joinToString { it.absolutePath }}"
+                        else "Multiple PDFs created: ${pdfFiles.joinToString { "\n ${it.absolutePath}" }}"
                     showToastAndUpdateStatusMessage(
                         message = message,
                         toastLength = Toast.LENGTH_LONG

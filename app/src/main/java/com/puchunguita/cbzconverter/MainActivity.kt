@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +37,7 @@ import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -76,7 +79,9 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -111,13 +116,25 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
         Divider()
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(text = "Current Task Status:")
-        Text(text = currentTaskStatus)
+        Column(
+            Modifier.height(200.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = "Current Task Status (Scrollable):", fontWeight = FontWeight.SemiBold)
+            Column(
+                Modifier.height(85.dp),
+                verticalArrangement = Arrangement.Center,
+            ) {
+                val scroll = rememberScrollState(0)
+                Text(text = currentTaskStatus, modifier = Modifier.verticalScroll(scroll))
+            }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Text(text = "Current Sub-Task Status:")
-        Text(text = currentSubTaskStatus)
+            Text(text = "Current Sub-Task Status:", fontWeight = FontWeight.SemiBold)
+            Text(text = currentSubTaskStatus)
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
         Divider()
