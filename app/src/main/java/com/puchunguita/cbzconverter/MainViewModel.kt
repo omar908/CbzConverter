@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.lang.Boolean.FALSE
 import java.util.logging.Level
 import java.util.logging.Logger
 
@@ -25,17 +26,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val context = getApplication<Application>().applicationContext
     private val logger = Logger.getLogger(MainViewModel::class.java.name)
 
-    private val _isCurrentlyConverting: MutableStateFlow<Boolean> = MutableStateFlow<Boolean>(false)
+    private val _isCurrentlyConverting: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isCurrentlyConverting = _isCurrentlyConverting.asStateFlow()
 
-    private val _currentTaskStatus: MutableStateFlow<String> = MutableStateFlow<String>(Companion.NOTHING_PROCESSING)
+    private val _currentTaskStatus: MutableStateFlow<String> = MutableStateFlow(NOTHING_PROCESSING)
     val currentTaskStatus = _currentTaskStatus.asStateFlow()
 
-    private val _currentSubTaskStatus: MutableStateFlow<String> = MutableStateFlow<String>(Companion.NOTHING_PROCESSING)
+    private val _currentSubTaskStatus: MutableStateFlow<String> = MutableStateFlow(NOTHING_PROCESSING)
     val currentSubTaskStatus = _currentSubTaskStatus.asStateFlow()
 
-    private val _maxNumberOfPages: MutableStateFlow<Int> = MutableStateFlow<Int>(100)
+    private val _maxNumberOfPages: MutableStateFlow<Int> = MutableStateFlow(100)
     val maxNumberOfPages = _maxNumberOfPages.asStateFlow()
+
+    private val _overrideSortOrderToUseOffset: MutableStateFlow<Boolean> = MutableStateFlow(FALSE)
+    val overrideSortOrderToUseOffset = _overrideSortOrderToUseOffset.asStateFlow()
 
     private fun convertCbzFileNameToPdfFileName(fileName: String) : String {
         return fileName.replace(".cbz", ".pdf")
@@ -44,6 +48,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun toggleIsCurrentlyConverting(): Boolean {
         _isCurrentlyConverting.update { currentState -> !currentState }
         return _isCurrentlyConverting.value
+    }
+
+    fun toggleOverrideSortOrderToUseOffset(newValue: Boolean) {
+        _overrideSortOrderToUseOffset.update { newValue }
     }
 
     private suspend fun updateConversionState() {
@@ -99,7 +107,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         CoroutineScope(Dispatchers.IO).launch {
             updateConversionState()
             try {
-                val originalCbzFileName = fileUri.getFileName(context);
+                val originalCbzFileName = fileUri.getFileName(context)
                 val pdfFileName = convertCbzFileNameToPdfFileName(originalCbzFileName)
 
                 updateCurrentTaskStatusMessageSuspend(message = "Conversion from CBZ to PDF started")
@@ -112,7 +120,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     },
                     maxNumberOfPages = _maxNumberOfPages.value,
-                    outputFileName = pdfFileName
+                    outputFileName = pdfFileName,
+                    overrideSortOrderToUseOffset = _overrideSortOrderToUseOffset.value
                 )
                 if (pdfFiles.isEmpty()) {
                     throw Exception("No PDF files created, CBZ file is invalid or empty")

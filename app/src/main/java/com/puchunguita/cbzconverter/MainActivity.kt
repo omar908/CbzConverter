@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -66,6 +67,7 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     val currentTaskStatus by viewModel.currentTaskStatus.collectAsState()
     val currentSubTaskStatus by viewModel.currentSubTaskStatus.collectAsState()
     val maxNumberOfPages by viewModel.maxNumberOfPages.collectAsState()
+    val overrideSortOrderToUseOffset by viewModel.overrideSortOrderToUseOffset.collectAsState()
 
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
     var fileName by remember { mutableStateOf("No file selected") }
@@ -164,6 +166,13 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
             singleLine = true
         )
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Default sort order uses file name (ASC)\n" +
+                    "Override Sort Order to Use Offset: $overrideSortOrderToUseOffset"
+        )
+        Checkbox(checked = overrideSortOrderToUseOffset, onCheckedChange = viewModel::toggleOverrideSortOrderToUseOffset)
     }
 }
 

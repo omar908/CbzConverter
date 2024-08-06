@@ -2,9 +2,7 @@ package com.puchunguita.cbzconverter
 
 import android.content.Context
 import android.net.Uri
-import android.os.Build
 import android.os.Environment
-import androidx.annotation.RequiresApi
 import com.itextpdf.io.image.ImageDataFactory
 import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfWriter
@@ -20,15 +18,15 @@ import java.util.zip.ZipFile
 import kotlin.math.ceil
 
 private val logger = Logger.getLogger("com.puchunguita.cbzconverter.ConversionFunction")
-@RequiresApi(Build.VERSION_CODES.O)
 fun convertCbzToPDF(
     fileUri: Uri,
     context: Context,
     subStepStatusAction: (String) -> Unit = { status -> logger.info(status) },
     maxNumberOfPages: Int = 100,
-    outputFileName: String = "output.pdf"
+    outputFileName: String = "output.pdf",
+    overrideSortOrderToUseOffset: Boolean = false
 ): List<File> {
-    val inputStream = context.contentResolver.openInputStream(fileUri) ?: return mutableListOf<File>()
+    val inputStream = context.contentResolver.openInputStream(fileUri) ?: return mutableListOf()
     val tempFile = copyCbzToCache(context, inputStream)
 
     // Open the CBZ file as a zip
@@ -36,15 +34,18 @@ fun convertCbzToPDF(
     val zipFileEntriesStream = zipFile.stream()
     val totalNumberOfImages = zipFile.size()
 
-    // Sorted, sorts by name of file before creating PDF
-    // without sort it goes based upon order in zip seems to go based upon a field called offset
-//     val zipFileEntriesList = zipFileEntriesStream.map { it }
-//        .collect(Collectors.toList())
-//        .toList()
-    val zipFileEntriesList = zipFileEntriesStream
-        .map { it }
-        .sorted { f1, f2 -> f1.name.compareTo(f2.name) }
-        .collect(Collectors.toList()).toList()
+    // Without `.sorted` it goes based upon order in zip which uses a field called offset, this order is inherited through zipFile.stream().
+    // Using `.sorted`, sorts by file name in ascending order
+    val zipFileEntriesList = if (overrideSortOrderToUseOffset) {
+        zipFileEntriesStream.map { it }
+            .collect(Collectors.toList())
+            .toList()
+    } else {
+        zipFileEntriesStream
+            .map { it }
+            .sorted { f1, f2 -> f1.name.compareTo(f2.name) }
+            .collect(Collectors.toList()).toList()
+    }
 
     val outputFiles = mutableListOf<File>()
     val downloadsFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
