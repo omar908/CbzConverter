@@ -2,7 +2,9 @@ package com.puchunguita.cbzconverter
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
+import androidx.annotation.RequiresApi
 import com.itextpdf.io.image.ImageDataFactory
 import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfWriter
@@ -10,14 +12,15 @@ import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.Image
 import java.io.File
 import java.io.InputStream
-import java.util.Enumeration
 import java.util.logging.Logger
+import java.util.stream.Collectors
 import java.util.stream.IntStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import kotlin.math.ceil
 
 private val logger = Logger.getLogger("com.puchunguita.cbzconverter.ConversionFunction")
+@RequiresApi(Build.VERSION_CODES.O)
 fun convertCbzToPDF(
     fileUri: Uri,
     context: Context,
@@ -30,8 +33,18 @@ fun convertCbzToPDF(
 
     // Open the CBZ file as a zip
     val zipFile = ZipFile(tempFile)
-    val zipFileEntries = zipFile.entries()
+    val zipFileEntriesStream = zipFile.stream()
     val totalNumberOfImages = zipFile.size()
+
+    // Sorted, sorts by name of file before creating PDF
+    // without sort it goes based upon order in zip seems to go based upon a field called offset
+//     val zipFileEntriesList = zipFileEntriesStream.map { it }
+//        .collect(Collectors.toList())
+//        .toList()
+    val zipFileEntriesList = zipFileEntriesStream
+        .map { it }
+        .sorted { f1, f2 -> f1.name.compareTo(f2.name) }
+        .collect(Collectors.toList()).toList()
 
     val outputFiles = mutableListOf<File>()
     val downloadsFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -42,7 +55,7 @@ fun convertCbzToPDF(
         createMultiplePdfFromCbz(
             totalNumberOfImages,
             maxNumberOfPages,
-            zipFileEntries,
+            zipFileEntriesList,
             outputFileName,
             downloadsFolder,
             subStepStatusAction,
@@ -51,7 +64,7 @@ fun convertCbzToPDF(
         )
     } else {
         createSinglePdfFromCbz(
-            zipFileEntries,
+            zipFileEntriesList,
             outputFileName,
             downloadsFolder,
             subStepStatusAction,
@@ -78,7 +91,7 @@ private fun copyCbzToCache(context: Context, inputStream: InputStream): File {
 private fun createMultiplePdfFromCbz(
     totalNumberOfImages: Int,
     maxNumberOfPages: Int,
-    zipFileEntries: Enumeration<out ZipEntry>,
+    zipFileEntriesList: List<ZipEntry>,
     outputFileName: String,
     downloadsFolder: File?,
     subStepStatusAction: (String) -> Unit,
@@ -86,7 +99,6 @@ private fun createMultiplePdfFromCbz(
     outputFiles: MutableList<File>
 ) {
     val amountOfFilesToExport = ceil(totalNumberOfImages.toDouble() / maxNumberOfPages).toInt()
-    val zipFileEntriesList = zipFileEntries.toList()
 
     IntStream.range(0, amountOfFilesToExport).forEach { index ->
         val newOutputFileName = outputFileName.replace(".pdf", "_part-${index + 1}.pdf")
@@ -117,7 +129,7 @@ private fun createMultiplePdfFromCbz(
 }
 
 private fun createSinglePdfFromCbz(
-    zipFileEntries: Enumeration<out ZipEntry>,
+    zipFileEntriesList: List<ZipEntry>,
     outputFileName: String,
     downloadsFolder: File?,
     subStepStatusAction: (String) -> Unit,
@@ -130,16 +142,13 @@ private fun createSinglePdfFromCbz(
     PdfWriter(outputFile.absolutePath).use { writer ->
         PdfDocument(writer).use { pdfDoc ->
             Document(pdfDoc).use { document ->
-                // Counter used for logging the progress only
-                var counter = 1
-                while (zipFileEntries.hasMoreElements()) {
+                for ((currentImageIndex, imageFile) in zipFileEntriesList.withIndex()) {
                     subStepStatusAction(
                         "Processing image file " +
-                                "$counter " +
+                                "${currentImageIndex + 1} " +
                                 "of $totalNumberOfImages"
                     )
-                    extractImageAndAddToPDFDocument(zipFile, zipFileEntries.nextElement(), document)
-                    counter++
+                    extractImageAndAddToPDFDocument(zipFile, imageFile, document)
                 }
             }
         }
