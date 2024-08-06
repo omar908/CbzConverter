@@ -53,6 +53,7 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     MainScreen(
                         viewModel = MainViewModel(application),
+                        activity = this,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -62,7 +63,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
+fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: Modifier = Modifier) {
     val isCurrentlyConverting by viewModel.isCurrentlyConverting.collectAsState()
     val currentTaskStatus by viewModel.currentTaskStatus.collectAsState()
     val currentSubTaskStatus by viewModel.currentSubTaskStatus.collectAsState()
@@ -94,7 +95,7 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
 
         Button(
             onClick = {
-                viewModel.checkPermissionAndSelectFileAction(context, filePickerLauncher)
+                viewModel.checkPermissionAndSelectFileAction(activity, filePickerLauncher)
             },
             enabled = !isCurrentlyConverting
         ) {
@@ -196,6 +197,6 @@ fun Uri.getFileName(context: Context): String {
 @Composable
 fun MainScreenPreview() {
     CbzConverterTheme {
-        MainScreen(viewModel = MainViewModel(application = ComponentActivity().application))
+        MainScreen(viewModel = MainViewModel(application = ComponentActivity().application), activity = ComponentActivity())
     }
 }
