@@ -16,6 +16,7 @@ import java.util.stream.IntStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import kotlin.math.ceil
+import kotlin.streams.asStream
 
 private val logger = Logger.getLogger("com.puchunguita.cbzconverter.ConversionFunction")
 fun convertCbzToPDF(
@@ -31,20 +32,18 @@ fun convertCbzToPDF(
 
     // Open the CBZ file as a zip
     val zipFile = ZipFile(tempFile)
-    val zipFileEntriesStream = zipFile.stream()
+    val zipFileEntriesStream = zipFile.entries().asSequence().asStream()
+
     val totalNumberOfImages = zipFile.size()
 
     // Without `.sorted` it goes based upon order in zip which uses a field called offset, this order is inherited through zipFile.stream().
     // Using `.sorted`, sorts by file name in ascending order
     val zipFileEntriesList = if (overrideSortOrderToUseOffset) {
-        zipFileEntriesStream.map { it }
-            .collect(Collectors.toList())
-            .toList()
+        zipFileEntriesStream.collect(Collectors.toList())
     } else {
         zipFileEntriesStream
-            .map { it }
             .sorted { f1, f2 -> f1.name.compareTo(f2.name) }
-            .collect(Collectors.toList()).toList()
+            .collect(Collectors.toList())
     }
 
     val outputFiles = mutableListOf<File>()

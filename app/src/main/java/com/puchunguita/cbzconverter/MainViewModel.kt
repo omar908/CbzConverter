@@ -2,8 +2,15 @@ package com.puchunguita.cbzconverter
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.content.Context
+import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.Settings
 import android.widget.Toast
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -145,7 +152,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-
-
-
+    fun checkPermissionAndSelectFileAction(
+        context: Context,
+        filePickerLauncher: ManagedActivityResultLauncher<Array<String>, Uri?>
+    ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                ContextCompat.startActivity(context, intent, null)
+            } else {
+                filePickerLauncher.launch(arrayOf("*/*"))
+            }
+        } else {
+            // TODO test with version lower than R/30 and fix permission issues.
+            filePickerLauncher.launch(arrayOf("*/*"))
+        }
+    }
 }

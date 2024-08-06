@@ -94,7 +94,7 @@ fun MainScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
 
         Button(
             onClick = {
-                filePickerLauncher.launch(arrayOf("*/*"))
+                viewModel.checkPermissionAndSelectFileAction(context, filePickerLauncher)
             },
             enabled = !isCurrentlyConverting
         ) {
