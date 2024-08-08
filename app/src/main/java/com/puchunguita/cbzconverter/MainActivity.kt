@@ -177,7 +177,7 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
                                 color = Color.Red
                             )
                         } else {
-                            Text("Override default file name")
+                            Text("Override default file name (Exclude Extension)")
                         }
                     },
                     enabled = !isCurrentlyConverting && selectedFileUri != null,
