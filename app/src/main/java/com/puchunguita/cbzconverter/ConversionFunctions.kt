@@ -25,7 +25,8 @@ fun convertCbzToPDF(
     subStepStatusAction: (String) -> Unit = { status -> logger.info(status) },
     maxNumberOfPages: Int = 100,
     outputFileName: String = "output.pdf",
-    overrideSortOrderToUseOffset: Boolean = false
+    overrideSortOrderToUseOffset: Boolean = false,
+    outputDirectory: File = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
 ): List<File> {
     val inputStream = context.contentResolver.openInputStream(fileUri) ?: return mutableListOf()
     val tempFile = copyCbzToCache(context, inputStream)
@@ -47,9 +48,8 @@ fun convertCbzToPDF(
     }
 
     val outputFiles = mutableListOf<File>()
-    val downloadsFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
 
-    if (!downloadsFolder.exists()) { downloadsFolder.mkdirs() }
+    if (!outputDirectory.exists()) { outputDirectory.mkdirs() }
 
     if (totalNumberOfImages > maxNumberOfPages) {
         createMultiplePdfFromCbz(
@@ -57,7 +57,7 @@ fun convertCbzToPDF(
             maxNumberOfPages,
             zipFileEntriesList,
             outputFileName,
-            downloadsFolder,
+            outputDirectory,
             subStepStatusAction,
             zipFile,
             outputFiles
@@ -66,7 +66,7 @@ fun convertCbzToPDF(
         createSinglePdfFromCbz(
             zipFileEntriesList,
             outputFileName,
-            downloadsFolder,
+            outputDirectory,
             subStepStatusAction,
             totalNumberOfImages,
             zipFile,
@@ -93,7 +93,7 @@ private fun createMultiplePdfFromCbz(
     maxNumberOfPages: Int,
     zipFileEntriesList: List<ZipEntry>,
     outputFileName: String,
-    downloadsFolder: File?,
+    outputDirectory: File?,
     subStepStatusAction: (String) -> Unit,
     zipFile: ZipFile,
     outputFiles: MutableList<File>
@@ -102,7 +102,7 @@ private fun createMultiplePdfFromCbz(
 
     IntStream.range(0, amountOfFilesToExport).forEach { index ->
         val newOutputFileName = outputFileName.replace(".pdf", "_part-${index + 1}.pdf")
-        val outputFile = File(downloadsFolder, newOutputFileName)
+        val outputFile = File(outputDirectory, newOutputFileName)
         val startIndex = index.times(maxNumberOfPages)
         val nextPossibleEndIndex = index.plus(1).times(maxNumberOfPages)
         val endIndex =
@@ -131,13 +131,13 @@ private fun createMultiplePdfFromCbz(
 private fun createSinglePdfFromCbz(
     zipFileEntriesList: List<ZipEntry>,
     outputFileName: String,
-    downloadsFolder: File?,
+    outputDirectory: File?,
     subStepStatusAction: (String) -> Unit,
     totalNumberOfImages: Int,
     zipFile: ZipFile,
     outputFiles: MutableList<File>
 ) {
-    val outputFile = File(downloadsFolder, outputFileName)
+    val outputFile = File(outputDirectory, outputFileName)
 
     PdfWriter(outputFile.absolutePath).use { writer ->
         PdfDocument(writer).use { pdfDoc ->

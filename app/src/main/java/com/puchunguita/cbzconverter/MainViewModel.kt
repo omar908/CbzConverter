@@ -15,6 +15,8 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
+import com.anggrayudi.storage.file.DocumentFileCompat
+import com.anggrayudi.storage.file.getAbsolutePath
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.lang.Boolean.FALSE
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -30,6 +33,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         private const val NOTHING_PROCESSING = "Nothing Processing"
+        private const val NO_FILE_SELECTED = "No file selected"
+        private const val NO_OVERRIDE_FILE_NAME = "No override file name provided"
         private const val STORAGE_PERMISSION_CODE = 1001
     }
 
@@ -51,6 +56,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _overrideSortOrderToUseOffset: MutableStateFlow<Boolean> = MutableStateFlow(FALSE)
     val overrideSortOrderToUseOffset = _overrideSortOrderToUseOffset.asStateFlow()
+
+    private val _overrideFileName: MutableStateFlow<String> = MutableStateFlow(NO_FILE_SELECTED)
+    val overrideFileName = _overrideFileName.asStateFlow()
+
+    private val _overrideOutputDirectoryUri: MutableStateFlow<Uri?> = MutableStateFlow(null)
+    val overrideOutputDirectoryUri = _overrideOutputDirectoryUri.asStateFlow()
 
     private fun convertCbzFileNameToPdfFileName(fileName: String) : String {
         return fileName.replace(".cbz", ".pdf")
@@ -103,6 +114,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun updateOverrideFileName(newOverrideFileName: String) {
+        _overrideFileName.update { newOverrideFileName }
+    }
+
+    fun updateOverrideFileNameFromUserInput(newOverrideFileName: String) {
+        try {
+            if (newOverrideFileName.isBlank()) throw Exception("Blank overrideFileName")
+            updateOverrideFileName(newOverrideFileName)
+            updateCurrentTaskStatusMessage("Updated overrideFileName: $newOverrideFileName")
+        } catch (e: Exception) {
+            updateCurrentTaskStatusMessage("Invalid overrideFileName: $newOverrideFileName reverting to empty value")
+            updateOverrideFileName(NO_OVERRIDE_FILE_NAME)
+        }
+    }
+
+    private fun updateOverrideOutputDirectoryUri(newOverrideOutputPath: Uri?) {
+        _overrideOutputDirectoryUri.update { newOverrideOutputPath }
+    }
+
+    fun updateOverrideOutputPathFromUserInput(newOverrideOutputPath: Uri) {
+        try {
+            updateOverrideOutputDirectoryUri(newOverrideOutputPath)
+            updateCurrentTaskStatusMessage("Updated overrideOutputPath: $newOverrideOutputPath")
+        } catch (e: Exception) {
+            updateCurrentTaskStatusMessage("Invalid overrideOutputPath: $newOverrideOutputPath reverting to empty value")
+            updateOverrideOutputDirectoryUri(null)
+        }
+    }
+
     private suspend fun showToastAndUpdateStatusMessage(
         message: String,
         toastLength: Int,
@@ -118,8 +158,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         CoroutineScope(Dispatchers.IO).launch {
             updateConversionState()
             try {
-                val originalCbzFileName = fileUri.getFileName(context)
+                var originalCbzFileName = fileUri.getFileName(context)
+
+                if (_overrideFileName.value != NO_FILE_SELECTED && _overrideFileName.value != NO_OVERRIDE_FILE_NAME) {
+                    originalCbzFileName = _overrideFileName.value.plus(".cbz")
+                }
+
                 val pdfFileName = convertCbzFileNameToPdfFileName(originalCbzFileName)
+
+                var outputFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                if (_overrideOutputDirectoryUri.value != null) {
+                    val file = DocumentFileCompat.fromUri(context, _overrideOutputDirectoryUri.value!!)
+                    outputFolder = file?.getAbsolutePath(context)?.let { File(it) }
+                }
 
                 updateCurrentTaskStatusMessageSuspend(message = "Conversion from CBZ to PDF started")
                 val pdfFiles = convertCbzToPDF(
@@ -132,7 +183,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     },
                     maxNumberOfPages = _maxNumberOfPages.value,
                     outputFileName = pdfFileName,
-                    overrideSortOrderToUseOffset = _overrideSortOrderToUseOffset.value
+                    overrideSortOrderToUseOffset = _overrideSortOrderToUseOffset.value,
+                    outputDirectory = outputFolder
                 )
                 if (pdfFiles.isEmpty()) {
                     throw Exception("No PDF files created, CBZ file is invalid or empty")
@@ -190,6 +242,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
             } else {
                 filePickerLauncher.launch(arrayOf("*/*"))
+            }
+        }
+    }
+
+    fun checkPermissionAndSelectDirectoryAction(
+        activity: ComponentActivity,
+        directoryPickerLauncher: ManagedActivityResultLauncher<Uri?, Uri?>
+    ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                ContextCompat.startActivity(activity, intent, null)
+            } else {
+                directoryPickerLauncher.launch(Uri.parse(Environment.getExternalStorageDirectory().toString()))
+            }
+        } else {
+            val writePermission = ContextCompat.checkSelfPermission(
+                activity,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
+            val readPermission = ContextCompat.checkSelfPermission(
+                activity,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            )
+
+            if (writePermission != PackageManager.PERMISSION_GRANTED ||
+                readPermission != PackageManager.PERMISSION_GRANTED) {
+
+                ActivityCompat.requestPermissions(
+                    activity,
+                    arrayOf(
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                        Manifest.permission.READ_EXTERNAL_STORAGE
+                    ),
+                    STORAGE_PERMISSION_CODE
+                )
+            } else {
+                directoryPickerLauncher.launch(Uri.parse(Environment.getExternalStorageDirectory().toString()))
             }
         }
     }

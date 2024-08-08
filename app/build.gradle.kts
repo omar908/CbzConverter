@@ -52,6 +52,7 @@ android {
 
 dependencies {
 
+    implementation ("com.anggrayudi:storage:2.0.0")
     implementation("com.itextpdf:itext7-core:7.2.6")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
