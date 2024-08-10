@@ -208,31 +208,47 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp),
-                verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = "File to Convert: $selectedFileName", modifier = Modifier.padding(bottom = 16.dp))
-
-                Button(
-                    onClick = {
-                        viewModel.checkPermissionAndSelectFileAction(activity, filePickerLauncher)
-                    },
-                    enabled = !isCurrentlyConverting
-                ) {
-                    Text(text = "Select CBZ File")
-                }
-
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Button(
-                    onClick = {
-                        selectedFilesUri.let {
-                            viewModel.convertToPDF(it)
-                        }
-                    },
-                    enabled = selectedFilesUri.isNotEmpty() && !isCurrentlyConverting
+                Column(
+                    Modifier.height(250.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(text = "Convert to PDF")
+                    Text(text = "File to Convert (Scrollable):", fontWeight = FontWeight.SemiBold)
+
+                    Column(
+                        Modifier.height(85.dp),
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        val scroll = rememberScrollState(0)
+                        Text(text = selectedFileName, modifier = Modifier.verticalScroll(scroll))
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+
+
+                    Button(
+                        onClick = {
+                            viewModel.checkPermissionAndSelectFileAction(activity, filePickerLauncher)
+                        },
+                        enabled = !isCurrentlyConverting
+                    ) {
+                        Text(text = "Select CBZ File")
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            selectedFilesUri.let {
+                                viewModel.convertToPDF(it)
+                            }
+                        },
+                        enabled = selectedFilesUri.isNotEmpty() && !isCurrentlyConverting
+                    ) {
+                        Text(text = "Convert to PDF")
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -246,7 +262,7 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
                 ) {
                     Text(text = "Current Task Status (Scrollable):", fontWeight = FontWeight.SemiBold)
                     Column(
-                        Modifier.height(85.dp),
+                        Modifier.height(100.dp),
                         verticalArrangement = Arrangement.Center,
                     ) {
                         val scroll = rememberScrollState(0)
