@@ -31,6 +31,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,6 +77,7 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
     val maxNumberOfPages by viewModel.maxNumberOfPages.collectAsState()
     val overrideSortOrderToUseOffset by viewModel.overrideSortOrderToUseOffset.collectAsState()
     val overrideFileName by viewModel.overrideFileName.collectAsState()
+    val originalFileName by viewModel.originalFileName.collectAsState()
     val overrideOutputDirectoryUri by viewModel.overrideOutputDirectoryUri.collectAsState()
 
     val context = LocalContext.current
@@ -85,15 +87,12 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
 
     // TODO move these into components or viewModel, including launchers
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
-    var fileName by remember { mutableStateOf("No file selected") }
-    var tempFileNameOverride by remember { mutableStateOf(overrideFileName) }
 
     val filePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let {
             selectedFileUri = it
-            fileName = it.getFileName(context)
+            viewModel.updateOriginalFileNameFromUserInput(it.getFileName(context))
             viewModel.updateOverrideFileNameFromUserInput(it.getFileName(context).replace(".cbz", ""))
-            tempFileNameOverride = it.getFileName(context).replace(".cbz", "")
         }
     }
 
@@ -162,6 +161,15 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
                 Text(text = "Current File Name: $overrideFileName")
                 Spacer(modifier = Modifier.height(16.dp))
 
+                var tempFileNameOverride by remember { mutableStateOf(overrideFileName) }
+
+                LaunchedEffect(overrideFileName) {
+                    // Updates tempFileNameOverride in case new file is chosen
+                    if (tempFileNameOverride != overrideFileName) {
+                        tempFileNameOverride = overrideFileName
+                    }
+                }
+
                 TextField(
                     value = tempFileNameOverride,
                     onValueChange = { tempFileNameOverride = it },
@@ -219,7 +227,7 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = fileName, modifier = Modifier.padding(bottom = 16.dp))
+                Text(text = "File to Convert: $originalFileName", modifier = Modifier.padding(bottom = 16.dp))
 
                 Button(
                     onClick = {

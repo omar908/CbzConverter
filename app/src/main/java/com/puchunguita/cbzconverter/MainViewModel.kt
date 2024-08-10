@@ -1,19 +1,12 @@
 package com.puchunguita.cbzconverter
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Application
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Environment
-import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import com.anggrayudi.storage.file.DocumentFileCompat
 import com.anggrayudi.storage.file.getAbsolutePath
@@ -36,7 +29,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private const val NOTHING_PROCESSING = "Nothing Processing"
         private const val NO_FILE_SELECTED = "No file selected"
         private const val NO_OVERRIDE_FILE_NAME = "No override file name provided"
-        private const val STORAGE_PERMISSION_CODE = 1001
     }
 
     @SuppressLint("StaticFieldLeak")
@@ -60,6 +52,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _overrideFileName: MutableStateFlow<String> = MutableStateFlow(NO_FILE_SELECTED)
     val overrideFileName = _overrideFileName.asStateFlow()
+
+    private val _originalFileName: MutableStateFlow<String> = MutableStateFlow(NO_FILE_SELECTED)
+    val originalFileName = _originalFileName.asStateFlow()
 
     private val _overrideOutputDirectoryUri: MutableStateFlow<Uri?> = MutableStateFlow(null)
     val overrideOutputDirectoryUri = _overrideOutputDirectoryUri.asStateFlow()
@@ -129,6 +124,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         } catch (e: Exception) {
             updateCurrentTaskStatusMessage("Invalid overrideFileName: $newOverrideFileName reverting to empty value")
             updateOverrideFileName(NO_OVERRIDE_FILE_NAME)
+        }
+    }
+
+    private fun updateOriginalFileName(newOriginalFileName: String) {
+        _originalFileName.update { newOriginalFileName }
+    }
+
+    fun updateOriginalFileNameFromUserInput(newOriginalFileName: String) {
+        try {
+            if (newOriginalFileName.isBlank()) throw Exception("Blank fileName")
+            updateOriginalFileName(newOriginalFileName)
+            updateCurrentTaskStatusMessage("Updated fileName: $newOriginalFileName")
+        } catch (e: Exception) {
+            updateCurrentTaskStatusMessage("Invalid fileName: $newOriginalFileName reverting to empty value")
+            updateOriginalFileName(NO_OVERRIDE_FILE_NAME)
         }
     }
 
