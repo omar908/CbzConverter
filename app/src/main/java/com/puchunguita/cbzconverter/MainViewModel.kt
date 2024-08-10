@@ -50,11 +50,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _overrideSortOrderToUseOffset: MutableStateFlow<Boolean> = MutableStateFlow(FALSE)
     val overrideSortOrderToUseOffset = _overrideSortOrderToUseOffset.asStateFlow()
 
+    private val _selectedFileName: MutableStateFlow<String> = MutableStateFlow(NO_FILE_SELECTED)
+    val selectedFileName = _selectedFileName.asStateFlow()
+
+    private val _selectedFileUri: MutableStateFlow<Uri?> = MutableStateFlow(null)
+    val selectedFileUri = _selectedFileUri.asStateFlow()
+
     private val _overrideFileName: MutableStateFlow<String> = MutableStateFlow(NO_FILE_SELECTED)
     val overrideFileName = _overrideFileName.asStateFlow()
-
-    private val _originalFileName: MutableStateFlow<String> = MutableStateFlow(NO_FILE_SELECTED)
-    val originalFileName = _originalFileName.asStateFlow()
 
     private val _overrideOutputDirectoryUri: MutableStateFlow<Uri?> = MutableStateFlow(null)
     val overrideOutputDirectoryUri = _overrideOutputDirectoryUri.asStateFlow()
@@ -127,18 +130,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun updateOriginalFileName(newOriginalFileName: String) {
-        _originalFileName.update { newOriginalFileName }
+    private fun updateSelectedFileName(newSelectedFileName: String) {
+        _selectedFileName.update { newSelectedFileName }
     }
 
-    fun updateOriginalFileNameFromUserInput(newOriginalFileName: String) {
+    fun updateOriginalFileNameFromUserInput(newSelectedFileName: String) {
         try {
-            if (newOriginalFileName.isBlank()) throw Exception("Blank fileName")
-            updateOriginalFileName(newOriginalFileName)
-            updateCurrentTaskStatusMessage("Updated fileName: $newOriginalFileName")
+            if (newSelectedFileName.isBlank()) throw Exception("Blank fileName")
+            updateSelectedFileName(newSelectedFileName)
+            updateCurrentTaskStatusMessage("Updated fileName: $newSelectedFileName")
         } catch (e: Exception) {
-            updateCurrentTaskStatusMessage("Invalid fileName: $newOriginalFileName reverting to empty value")
-            updateOriginalFileName(NO_OVERRIDE_FILE_NAME)
+            updateCurrentTaskStatusMessage("Invalid fileName: $newSelectedFileName reverting to empty value")
+            updateSelectedFileName(NO_OVERRIDE_FILE_NAME)
+        }
+    }
+
+    private fun updateSelectedFileUri(newSelectedFileUri: Uri?) {
+        _selectedFileUri.update { newSelectedFileUri }
+    }
+
+    fun updateUpdateSelectedFileUriFromUserInput(newSelectedFileUri: Uri) {
+        try {
+            updateSelectedFileUri(newSelectedFileUri)
+            updateCurrentTaskStatusMessage("Updated overrideOutputPath: $newSelectedFileUri")
+        } catch (e: Exception) {
+            updateCurrentTaskStatusMessage("Invalid overrideOutputPath: $newSelectedFileUri reverting to empty value")
+            updateSelectedFileUri(null)
         }
     }
 

@@ -76,8 +76,9 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
     val currentSubTaskStatus by viewModel.currentSubTaskStatus.collectAsState()
     val maxNumberOfPages by viewModel.maxNumberOfPages.collectAsState()
     val overrideSortOrderToUseOffset by viewModel.overrideSortOrderToUseOffset.collectAsState()
+    val selectedFileName by viewModel.selectedFileName.collectAsState()
+    val selectedFileUri by viewModel.selectedFileUri.collectAsState()
     val overrideFileName by viewModel.overrideFileName.collectAsState()
-    val originalFileName by viewModel.originalFileName.collectAsState()
     val overrideOutputDirectoryUri by viewModel.overrideOutputDirectoryUri.collectAsState()
 
     val context = LocalContext.current
@@ -85,12 +86,10 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
     val scope = rememberCoroutineScope()
     val scaffoldState = rememberBottomSheetScaffoldState()
 
-    // TODO move these into components or viewModel, including launchers
-    var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
-
     val filePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let {
-            selectedFileUri = it
+            //TODO move file name updates within updateUpdateSelectedFileUriFromUserInput()
+            viewModel.updateUpdateSelectedFileUriFromUserInput(it)
             viewModel.updateOriginalFileNameFromUserInput(it.getFileName(context))
             viewModel.updateOverrideFileNameFromUserInput(it.getFileName(context).replace(".cbz", ""))
         }
@@ -227,7 +226,7 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = "File to Convert: $originalFileName", modifier = Modifier.padding(bottom = 16.dp))
+                Text(text = "File to Convert: $selectedFileName", modifier = Modifier.padding(bottom = 16.dp))
 
                 Button(
                     onClick = {
