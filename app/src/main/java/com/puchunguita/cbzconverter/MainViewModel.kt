@@ -2,8 +2,10 @@ package com.puchunguita.cbzconverter
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.content.Context
 import android.net.Uri
 import android.os.Environment
+import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.ManagedActivityResultLauncher
@@ -134,13 +136,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _selectedFileName.update { newSelectedFileName }
     }
 
-    fun updateOriginalFileNameFromUserInput(newSelectedFileName: String) {
+    private fun updateSelectedFileNameFromUserInput(newSelectedFileName: String) {
         try {
             if (newSelectedFileName.isBlank()) throw Exception("Blank fileName")
             updateSelectedFileName(newSelectedFileName)
-            updateCurrentTaskStatusMessage("Updated fileName: $newSelectedFileName")
+            updateOverrideFileNameFromUserInput(newSelectedFileName.replace(".cbz", ""))
+            updateCurrentTaskStatusMessage("Updated selectedFileName: $newSelectedFileName")
         } catch (e: Exception) {
-            updateCurrentTaskStatusMessage("Invalid fileName: $newSelectedFileName reverting to empty value")
+            updateCurrentTaskStatusMessage("Invalid selectedFileName: $newSelectedFileName reverting to empty value")
             updateSelectedFileName(NO_OVERRIDE_FILE_NAME)
         }
     }
@@ -152,9 +155,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateUpdateSelectedFileUriFromUserInput(newSelectedFileUri: Uri) {
         try {
             updateSelectedFileUri(newSelectedFileUri)
-            updateCurrentTaskStatusMessage("Updated overrideOutputPath: $newSelectedFileUri")
+            updateSelectedFileNameFromUserInput(newSelectedFileUri.getFileName(context))
+            updateCurrentTaskStatusMessage("Updated SelectedFileUri: $newSelectedFileUri")
         } catch (e: Exception) {
-            updateCurrentTaskStatusMessage("Invalid overrideOutputPath: $newSelectedFileUri reverting to empty value")
+            updateCurrentTaskStatusMessage("Invalid SelectedFileUri: $newSelectedFileUri reverting to empty value")
             updateSelectedFileUri(null)
         }
     }
@@ -262,5 +266,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         directoryPickerLauncher: ManagedActivityResultLauncher<Uri?, Uri?>
     ) {
         PermissionsManager.checkPermissionAndSelectDirectoryAction(activity, directoryPickerLauncher)
+    }
+
+    private fun Uri.getFileName(context: Context): String {
+        var name = "Unknown"
+        context.contentResolver.query(
+            this,
+            null,
+            null,
+            null,
+            null
+        )?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            cursor.moveToFirst()
+            name = cursor.getString(nameIndex)
+        }
+        return name
     }
 }

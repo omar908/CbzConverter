@@ -1,9 +1,7 @@
 package com.puchunguita.cbzconverter
 
-import android.content.Context
 import android.net.Uri
 import android.os.Bundle
-import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -42,7 +40,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -81,17 +78,12 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
     val overrideFileName by viewModel.overrideFileName.collectAsState()
     val overrideOutputDirectoryUri by viewModel.overrideOutputDirectoryUri.collectAsState()
 
-    val context = LocalContext.current
-
     val scope = rememberCoroutineScope()
     val scaffoldState = rememberBottomSheetScaffoldState()
 
     val filePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let {
-            //TODO move file name updates within updateUpdateSelectedFileUriFromUserInput()
             viewModel.updateUpdateSelectedFileUriFromUserInput(it)
-            viewModel.updateOriginalFileNameFromUserInput(it.getFileName(context))
-            viewModel.updateOverrideFileNameFromUserInput(it.getFileName(context).replace(".cbz", ""))
         }
     }
 
@@ -284,22 +276,6 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
         },
         sheetPeekHeight = 152.dp
     )
-}
-
-fun Uri.getFileName(context: Context): String {
-    var name = "Unknown"
-    context.contentResolver.query(
-        this,
-        null,
-        null,
-        null,
-        null
-    )?.use { cursor ->
-        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-        cursor.moveToFirst()
-        name = cursor.getString(nameIndex)
-    }
-    return name
 }
 
 @Preview(showBackground = true)
