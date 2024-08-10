@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.lang.Boolean.FALSE
+import java.lang.Boolean.TRUE
 import java.util.logging.Level
 import java.util.logging.Logger
 
@@ -67,8 +68,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return fileName.replace(".cbz", ".pdf")
     }
 
-    private fun toggleIsCurrentlyConverting(): Boolean {
-        _isCurrentlyConverting.update { currentState -> !currentState }
+    private fun toggleIsCurrentlyConverting(forceUpdate: Boolean): Boolean {
+        _isCurrentlyConverting.update { forceUpdate }
         return _isCurrentlyConverting.value
     }
 
@@ -76,9 +77,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _overrideSortOrderToUseOffset.update { newValue }
     }
 
-    private suspend fun updateConversionState() {
+    private suspend fun updateConversionState(forceUpdate: Boolean) {
         withContext(Dispatchers.Main) {
-            logger.info(if (toggleIsCurrentlyConverting()) "Conversion started" else "Conversion ended")
+            logger.info(
+                if (toggleIsCurrentlyConverting(forceUpdate)) "Conversion started" else "Conversion ended"
+            )
         }
     }
 
@@ -156,21 +159,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun convertToPDF(fileUri: Uri) {
         CoroutineScope(Dispatchers.IO).launch {
-            updateConversionState()
+            updateConversionState(TRUE)
             try {
-                var originalCbzFileName = fileUri.getFileName(context)
-
-                if (_overrideFileName.value != NO_FILE_SELECTED && _overrideFileName.value != NO_OVERRIDE_FILE_NAME) {
-                    originalCbzFileName = _overrideFileName.value.plus(".cbz")
-                }
-
-                val pdfFileName = convertCbzFileNameToPdfFileName(originalCbzFileName)
-
-                var outputFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                if (_overrideOutputDirectoryUri.value != null) {
-                    val file = DocumentFileCompat.fromUri(context, _overrideOutputDirectoryUri.value!!)
-                    outputFolder = file?.getAbsolutePath(context)?.let { File(it) }
-                }
+                val pdfFileName = getFileNameForPdf(fileUri)
+                val outputFolder = getOutputFolder()
 
                 updateCurrentTaskStatusMessageSuspend(message = "Conversion from CBZ to PDF started")
                 val pdfFiles = convertCbzToPDF(
@@ -186,16 +178,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     overrideSortOrderToUseOffset = _overrideSortOrderToUseOffset.value,
                     outputDirectory = outputFolder
                 )
-                if (pdfFiles.isEmpty()) {
-                    throw Exception("No PDF files created, CBZ file is invalid or empty")
-                } else {
-                    val message = if (pdfFiles.size == 1) "PDF created: ${pdfFiles.first().absolutePath}"
-                        else "Multiple PDFs created: ${pdfFiles.joinToString { "\n ${it.absolutePath}" }}"
-                    showToastAndUpdateStatusMessage(
-                        message = message,
-                        toastLength = Toast.LENGTH_LONG
-                    )
-                }
+                checkPdfsFilesSizeAndUpdateStatus(pdfFiles)
             } catch (e: Exception) {
                 showToastAndUpdateStatusMessage(
                     message = "Conversion failed: ${e.message}",
@@ -203,9 +186,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
                 logger.warning("Conversion failed stacktrace: ${e.stackTrace.contentToString()}")
             } finally {
-                updateConversionState()
+                updateConversionState(FALSE)
             }
         }
+    }
+
+    private suspend fun checkPdfsFilesSizeAndUpdateStatus(pdfFiles: List<File>) {
+        if (pdfFiles.isEmpty()) {
+            throw Exception("No PDF files created, CBZ file is invalid or empty")
+        } else {
+            val message = if (pdfFiles.size == 1) "PDF created: ${pdfFiles.first().absolutePath}"
+            else "Multiple PDFs created: ${pdfFiles.joinToString { "\n ${it.absolutePath}" }}"
+            showToastAndUpdateStatusMessage(
+                message = message,
+                toastLength = Toast.LENGTH_LONG
+            )
+        }
+    }
+
+    private fun getFileNameForPdf(fileUri: Uri): String {
+        var originalCbzFileName = fileUri.getFileName(context)
+
+        if (_overrideFileName.value != NO_FILE_SELECTED && _overrideFileName.value != NO_OVERRIDE_FILE_NAME) {
+            originalCbzFileName = _overrideFileName.value.plus(".cbz")
+        }
+        return convertCbzFileNameToPdfFileName(originalCbzFileName)
+    }
+
+    private fun getOutputFolder(): File {
+        var outputFolder =
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        if (_overrideOutputDirectoryUri.value != null) {
+            val file = DocumentFileCompat.fromUri(context, _overrideOutputDirectoryUri.value!!)
+            outputFolder = file?.getAbsolutePath(context)?.let { File(it) }
+        }
+        return outputFolder
     }
 
     fun checkPermissionAndSelectFileAction(

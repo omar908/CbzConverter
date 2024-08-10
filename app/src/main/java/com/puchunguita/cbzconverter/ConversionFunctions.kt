@@ -36,6 +36,7 @@ fun convertCbzToPDF(
     val zipFileEntriesStream = zipFile.entries().asSequence().asStream()
 
     val totalNumberOfImages = zipFile.size()
+    if (totalNumberOfImages == 0) { return mutableListOf() }
 
     // Without `.sorted` it goes based upon order in zip which uses a field called offset, this order is inherited through zipFile.stream().
     // Using `.sorted`, sorts by file name in ascending order
