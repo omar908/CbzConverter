@@ -24,13 +24,14 @@ import java.lang.Boolean.FALSE
 import java.lang.Boolean.TRUE
 import java.util.logging.Level
 import java.util.logging.Logger
+import java.util.stream.Collectors
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         private const val NOTHING_PROCESSING = "Nothing Processing"
         private const val NO_FILE_SELECTED = "No file selected"
-        private const val NO_OVERRIDE_FILE_NAME = "No override file name provided"
+        const val NO_OVERRIDE_FILE_NAME = "No override file name provided"
     }
 
     @SuppressLint("StaticFieldLeak")
@@ -55,17 +56,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedFileName: MutableStateFlow<String> = MutableStateFlow(NO_FILE_SELECTED)
     val selectedFileName = _selectedFileName.asStateFlow()
 
-    private val _selectedFileUri: MutableStateFlow<Uri?> = MutableStateFlow(null)
+    private val _selectedFileUri: MutableStateFlow<List<Uri>> = MutableStateFlow(emptyList())
     val selectedFileUri = _selectedFileUri.asStateFlow()
 
-    private val _overrideFileName: MutableStateFlow<String> = MutableStateFlow(NO_FILE_SELECTED)
+    private val _overrideFileName: MutableStateFlow<String> = MutableStateFlow(NO_OVERRIDE_FILE_NAME)
     val overrideFileName = _overrideFileName.asStateFlow()
 
     private val _overrideOutputDirectoryUri: MutableStateFlow<Uri?> = MutableStateFlow(null)
     val overrideOutputDirectoryUri = _overrideOutputDirectoryUri.asStateFlow()
 
-    private fun convertCbzFileNameToPdfFileName(fileName: String) : String {
-        return fileName.replace(".cbz", ".pdf")
+    private fun convertListOfCbzFileNameToPdfFileName(fileNames: List<String>) : List<String> {
+        return fileNames.stream().map{ it.replace(".cbz", ".pdf") }.collect(Collectors.toList())
     }
 
     private fun toggleIsCurrentlyConverting(forceUpdate: Boolean): Boolean {
@@ -136,30 +137,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _selectedFileName.update { newSelectedFileName }
     }
 
-    private fun updateSelectedFileNameFromUserInput(newSelectedFileName: String) {
+    private fun updateSelectedFileNameFromUserInput(newSelectedFileNames: String) {
         try {
-            if (newSelectedFileName.isBlank()) throw Exception("Blank fileName")
-            updateSelectedFileName(newSelectedFileName)
-            updateOverrideFileNameFromUserInput(newSelectedFileName.replace(".cbz", ""))
-            updateCurrentTaskStatusMessage("Updated selectedFileName: $newSelectedFileName")
+            if (newSelectedFileNames.isBlank()) throw Exception("Blank fileName")
+            updateSelectedFileName(newSelectedFileNames)
+            updateOverrideFileNameFromUserInput(NO_OVERRIDE_FILE_NAME)
+            updateCurrentTaskStatusMessage("Updated selectedFileName: $newSelectedFileNames")
         } catch (e: Exception) {
-            updateCurrentTaskStatusMessage("Invalid selectedFileName: $newSelectedFileName reverting to empty value")
+            updateCurrentTaskStatusMessage("Invalid selectedFileName: $newSelectedFileNames reverting to empty value")
             updateSelectedFileName(NO_OVERRIDE_FILE_NAME)
         }
     }
 
-    private fun updateSelectedFileUri(newSelectedFileUri: Uri?) {
+    private fun updateSelectedFileUri(newSelectedFileUri: List<Uri>) {
         _selectedFileUri.update { newSelectedFileUri }
     }
 
-    fun updateUpdateSelectedFileUriFromUserInput(newSelectedFileUri: Uri) {
+    fun updateUpdateSelectedFileUriFromUserInput(newSelectedFileUris: List<Uri>) {
         try {
-            updateSelectedFileUri(newSelectedFileUri)
-            updateSelectedFileNameFromUserInput(newSelectedFileUri.getFileName(context))
-            updateCurrentTaskStatusMessage("Updated SelectedFileUri: $newSelectedFileUri")
+            updateSelectedFileUri(newSelectedFileUris)
+            val separator = "\n"
+            val selectedFileNames = newSelectedFileUris.stream().map { selectedFileUri -> selectedFileUri.getFileName(context) }.collect(
+                Collectors.toList()).joinToString(separator)
+            updateSelectedFileNameFromUserInput(selectedFileNames)
+            updateCurrentTaskStatusMessage("Updated SelectedFileUri: $newSelectedFileUris")
         } catch (e: Exception) {
-            updateCurrentTaskStatusMessage("Invalid SelectedFileUri: $newSelectedFileUri reverting to empty value")
-            updateSelectedFileUri(null)
+            updateCurrentTaskStatusMessage("Invalid SelectedFileUri: $newSelectedFileUris reverting to empty value")
+            updateSelectedFileUri(emptyList())
         }
     }
 
@@ -188,16 +192,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun convertToPDF(fileUri: Uri) {
+    fun convertToPDF(fileUris: List<Uri>) {
         CoroutineScope(Dispatchers.IO).launch {
             updateConversionState(TRUE)
             try {
-                val pdfFileName = getFileNameForPdf(fileUri)
+                val pdfFileName = getFileNameForPdf(fileUris)
                 val outputFolder = getOutputFolder()
 
                 updateCurrentTaskStatusMessageSuspend(message = "Conversion from CBZ to PDF started")
                 val pdfFiles = convertCbzToPDF(
-                    fileUri = fileUri,
+                    fileUri = fileUris,
                     context = context,
                     subStepStatusAction = { message: String ->
                         CoroutineScope(Dispatchers.Main).launch {
@@ -205,7 +209,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     },
                     maxNumberOfPages = _maxNumberOfPages.value,
-                    outputFileName = pdfFileName,
+                    outputFileNames = pdfFileName,
                     overrideSortOrderToUseOffset = _overrideSortOrderToUseOffset.value,
                     outputDirectory = outputFolder
                 )
@@ -235,13 +239,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun getFileNameForPdf(fileUri: Uri): String {
-        var originalCbzFileName = fileUri.getFileName(context)
+    private fun getFileNameForPdf(filesUri: List<Uri>): List<String> {
+        var fileUri = filesUri.stream().map {it.getFileName(context)}.collect(Collectors.toList())
 
-        if (_overrideFileName.value != NO_FILE_SELECTED && _overrideFileName.value != NO_OVERRIDE_FILE_NAME) {
-            originalCbzFileName = _overrideFileName.value.plus(".cbz")
+        if (_overrideFileName.value != NO_OVERRIDE_FILE_NAME) {
+            fileUri = if(fileUri.size == 1) {
+                List(1) { _overrideFileName.value.plus(".cbz") }
+            } else {
+                List(fileUri.size) { index ->
+                    _overrideFileName.value + "_${index + 1}.cbz"
+                }
+            }
         }
-        return convertCbzFileNameToPdfFileName(originalCbzFileName)
+        return convertListOfCbzFileNameToPdfFileName(fileUri)
     }
 
     private fun getOutputFolder(): File {
@@ -256,7 +266,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun checkPermissionAndSelectFileAction(
         activity: ComponentActivity,
-        filePickerLauncher: ManagedActivityResultLauncher<Array<String>, Uri?>
+        filePickerLauncher: ManagedActivityResultLauncher<Array<String>, List<Uri>>
     ) {
         PermissionsManager.checkPermissionAndSelectFileAction(activity, filePickerLauncher)
     }

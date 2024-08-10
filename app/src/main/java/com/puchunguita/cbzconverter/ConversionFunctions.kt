@@ -20,63 +20,73 @@ import kotlin.streams.asStream
 
 private val logger = Logger.getLogger("com.puchunguita.cbzconverter.ConversionFunction")
 fun convertCbzToPDF(
-    fileUri: Uri,
+    fileUri: List<Uri>,
     context: Context,
     subStepStatusAction: (String) -> Unit = { status -> logger.info(status) },
     maxNumberOfPages: Int = 100,
-    outputFileName: String = "output.pdf",
+    outputFileNames: List<String> = List(fileUri.size) { index -> "output_$index.pdf" },
     overrideSortOrderToUseOffset: Boolean = false,
     outputDirectory: File = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
 ): List<File> {
-    val inputStream = context.contentResolver.openInputStream(fileUri) ?: return mutableListOf()
-    val tempFile = copyCbzToCache(context, inputStream)
-
-    // Open the CBZ file as a zip
-    val zipFile = ZipFile(tempFile)
-    val zipFileEntriesStream = zipFile.entries().asSequence().asStream()
-
-    val totalNumberOfImages = zipFile.size()
-    if (totalNumberOfImages == 0) { return mutableListOf() }
-
-    // Without `.sorted` it goes based upon order in zip which uses a field called offset, this order is inherited through zipFile.stream().
-    // Using `.sorted`, sorts by file name in ascending order
-    val zipFileEntriesList = if (overrideSortOrderToUseOffset) {
-        zipFileEntriesStream.collect(Collectors.toList())
-    } else {
-        zipFileEntriesStream
-            .sorted { f1, f2 -> f1.name.compareTo(f2.name) }
-            .collect(Collectors.toList())
-    }
-
+    if (fileUri.isEmpty()) { return mutableListOf() }
     val outputFiles = mutableListOf<File>()
 
-    if (!outputDirectory.exists()) { outputDirectory.mkdirs() }
+    fileUri.forEachIndexed  { index, uri ->
+        val outputFileName = outputFileNames[index]
 
-    if (totalNumberOfImages > maxNumberOfPages) {
-        createMultiplePdfFromCbz(
-            totalNumberOfImages,
-            maxNumberOfPages,
-            zipFileEntriesList,
-            outputFileName,
-            outputDirectory,
-            subStepStatusAction,
-            zipFile,
-            outputFiles
-        )
-    } else {
-        createSinglePdfFromCbz(
-            zipFileEntriesList,
-            outputFileName,
-            outputDirectory,
-            subStepStatusAction,
-            totalNumberOfImages,
-            zipFile,
-            outputFiles
-        )
+        val inputStream = context.contentResolver.openInputStream(uri) ?: run {
+            subStepStatusAction("No images found in CBZ file: $outputFileName"); return@forEachIndexed
+        }
+
+        val tempFile = copyCbzToCache(context, inputStream)
+
+        // Open the CBZ file as a zip
+        val zipFile = ZipFile(tempFile)
+        val zipFileEntriesStream = zipFile.entries().asSequence().asStream()
+
+        val totalNumberOfImages = zipFile.size()
+        if (totalNumberOfImages == 0) { subStepStatusAction("No images found in CBZ file: $outputFileName"); return@forEachIndexed }
+
+        // Without `.sorted` it goes based upon order in zip which uses a field called offset, this order is inherited through zipFile.stream().
+        // Using `.sorted`, sorts by file name in ascending order
+        val zipFileEntriesList = if (overrideSortOrderToUseOffset) {
+            zipFileEntriesStream.collect(Collectors.toList())
+        } else {
+            zipFileEntriesStream
+                .sorted { f1, f2 -> f1.name.compareTo(f2.name) }
+                .collect(Collectors.toList())
+        }
+
+        if (!outputDirectory.exists()) { outputDirectory.mkdirs() }
+
+        if (totalNumberOfImages > maxNumberOfPages) {
+            createMultiplePdfFromCbz(
+                totalNumberOfImages,
+                maxNumberOfPages,
+                zipFileEntriesList,
+                outputFileName,
+                outputDirectory,
+                subStepStatusAction,
+                zipFile,
+                outputFiles
+            )
+        } else {
+            createSinglePdfFromCbz(
+                zipFileEntriesList,
+                outputFileName,
+                outputDirectory,
+                subStepStatusAction,
+                totalNumberOfImages,
+                zipFile,
+                outputFiles
+            )
+        }
+
+        zipFile.close()
+        tempFile.delete()
+
     }
 
-    zipFile.close()
-    tempFile.delete()
     return outputFiles
 }
 

@@ -74,15 +74,15 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
     val maxNumberOfPages by viewModel.maxNumberOfPages.collectAsState()
     val overrideSortOrderToUseOffset by viewModel.overrideSortOrderToUseOffset.collectAsState()
     val selectedFileName by viewModel.selectedFileName.collectAsState()
-    val selectedFileUri by viewModel.selectedFileUri.collectAsState()
+    val selectedFilesUri by viewModel.selectedFileUri.collectAsState()
     val overrideFileName by viewModel.overrideFileName.collectAsState()
     val overrideOutputDirectoryUri by viewModel.overrideOutputDirectoryUri.collectAsState()
 
     val scope = rememberCoroutineScope()
     val scaffoldState = rememberBottomSheetScaffoldState()
 
-    val filePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        uri?.let {
+    val filePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri> ->
+        uris.let {
             viewModel.updateUpdateSelectedFileUriFromUserInput(it)
         }
     }
@@ -152,14 +152,7 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
                 Text(text = "Current File Name: $overrideFileName")
                 Spacer(modifier = Modifier.height(16.dp))
 
-                var tempFileNameOverride by remember { mutableStateOf(overrideFileName) }
-
-                LaunchedEffect(overrideFileName) {
-                    // Updates tempFileNameOverride in case new file is chosen
-                    if (tempFileNameOverride != overrideFileName) {
-                        tempFileNameOverride = overrideFileName
-                    }
-                }
+                var tempFileNameOverride by remember { mutableStateOf(MainViewModel.NO_OVERRIDE_FILE_NAME) }
 
                 TextField(
                     value = tempFileNameOverride,
@@ -179,7 +172,7 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
                             Text("Override default file name (Exclude Extension)")
                         }
                     },
-                    enabled = !isCurrentlyConverting && selectedFileUri != null,
+                    enabled = !isCurrentlyConverting && selectedFilesUri.isNotEmpty(),
                     singleLine = true
                 )
 
@@ -233,11 +226,11 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
 
                 Button(
                     onClick = {
-                        selectedFileUri?.let {
+                        selectedFilesUri.let {
                             viewModel.convertToPDF(it)
                         }
                     },
-                    enabled = selectedFileUri != null && !isCurrentlyConverting
+                    enabled = selectedFilesUri.isNotEmpty() && !isCurrentlyConverting
                 ) {
                     Text(text = "Convert to PDF")
                 }

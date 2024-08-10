@@ -19,7 +19,7 @@ class PermissionsManager {
 
         fun checkPermissionAndSelectFileAction(
             activity: ComponentActivity,
-            filePickerLauncher: ManagedActivityResultLauncher<Array<String>, Uri?>
+            filePickerLauncher: ManagedActivityResultLauncher<Array<String>, List<Uri>>
         ) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 if (!Environment.isExternalStorageManager()) {
