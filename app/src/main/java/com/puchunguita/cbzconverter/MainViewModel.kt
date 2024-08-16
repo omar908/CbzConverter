@@ -25,7 +25,7 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
     companion object {
         private const val NOTHING_PROCESSING = "Nothing Processing"
         private const val NO_FILE_SELECTED = "No file selected"
-        const val NO_OVERRIDE_FILE_NAME = "No override file name provided"
+        const val EMPTY_STRING = ""
     }
 
     private val logger = Logger.getLogger(MainViewModel::class.java.name)
@@ -51,7 +51,7 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
     private val _selectedFileUri: MutableStateFlow<List<Uri>> = MutableStateFlow(emptyList())
     val selectedFileUri = _selectedFileUri.asStateFlow()
 
-    private val _overrideFileName: MutableStateFlow<String> = MutableStateFlow(NO_OVERRIDE_FILE_NAME)
+    private val _overrideFileName: MutableStateFlow<String> = MutableStateFlow(EMPTY_STRING)
     val overrideFileName = _overrideFileName.asStateFlow()
 
     private val _overrideOutputDirectoryUri: MutableStateFlow<Uri?> = MutableStateFlow(null)
@@ -121,7 +121,7 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
             updateCurrentTaskStatusMessage("Updated overrideFileName: $newOverrideFileName")
         } catch (e: Exception) {
             updateCurrentTaskStatusMessage("Invalid overrideFileName: $newOverrideFileName reverting to empty value")
-            updateOverrideFileName(NO_OVERRIDE_FILE_NAME)
+            updateOverrideFileName(EMPTY_STRING)
         }
     }
 
@@ -133,11 +133,11 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
         try {
             if (newSelectedFileNames.isBlank()) throw Exception("Blank fileName")
             updateSelectedFileName(newSelectedFileNames)
-            updateOverrideFileNameFromUserInput(NO_OVERRIDE_FILE_NAME)
+            updateOverrideFileNameFromUserInput(EMPTY_STRING)
             updateCurrentTaskStatusMessage("Updated selectedFileName: $newSelectedFileNames")
         } catch (e: Exception) {
             updateCurrentTaskStatusMessage("Invalid selectedFileName: $newSelectedFileNames reverting to empty value")
-            updateSelectedFileName(NO_OVERRIDE_FILE_NAME)
+            updateSelectedFileName(EMPTY_STRING)
         }
     }
 
@@ -234,7 +234,7 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
     private fun getFileNameForPdf(filesUri: List<Uri>): List<String> {
         var fileUri = filesUri.stream().map {it.getFileName()}.collect(Collectors.toList())
 
-        if (_overrideFileName.value != NO_OVERRIDE_FILE_NAME) {
+        if (_overrideFileName.value != EMPTY_STRING) {
             fileUri = if(fileUri.size == 1) {
                 List(1) { _overrideFileName.value.plus(".cbz") }
             } else {

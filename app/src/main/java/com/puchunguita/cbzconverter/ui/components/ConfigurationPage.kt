@@ -139,7 +139,7 @@ private fun FileNameOverrideConfigSegment(
     Text(text = "Current File Name: $overrideFileName")
     Spacer(modifier = Modifier.height(16.dp))
 
-    var tempFileNameOverride by remember { mutableStateOf(MainViewModel.NO_OVERRIDE_FILE_NAME) }
+    var tempFileNameOverride by remember { mutableStateOf(MainViewModel.EMPTY_STRING) }
 
     TextField(
         value = tempFileNameOverride,
@@ -150,7 +150,7 @@ private fun FileNameOverrideConfigSegment(
             focusManager.clearFocus()
         }),
         label = {
-            if (!overrideFileName.contentEquals(tempFileNameOverride)) {
+            if (!overrideFileName.contentEquals(tempFileNameOverride) && tempFileNameOverride.isNotBlank()) {
                 Text(
                     text = "Value not saved, click Done (✓) on keyboard",
                     color = Color.Red
