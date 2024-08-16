@@ -34,7 +34,7 @@ class MainActivity : ComponentActivity() {
             CbzConverterTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     MainScreen(
-                        viewModel = MainViewModel(application),
+                        viewModel = MainViewModel(ContextHelper(this)),
                         activity = this,
                         modifier = Modifier.padding(innerPadding)
                     )
@@ -110,6 +110,9 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
 @Composable
 fun MainScreenPreview() {
     CbzConverterTheme {
-        MainScreen(viewModel = MainViewModel(application = ComponentActivity().application), activity = ComponentActivity())
+        MainScreen(
+            viewModel = MainViewModel(contextHelper = ContextHelper(ComponentActivity())),
+            activity = ComponentActivity()
+        )
     }
 }

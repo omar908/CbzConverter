@@ -1,6 +1,5 @@
 package com.puchunguita.cbzconverter
 
-import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import com.itextpdf.io.image.ImageDataFactory
@@ -21,12 +20,12 @@ import kotlin.streams.asStream
 private val logger = Logger.getLogger("com.puchunguita.cbzconverter.ConversionFunction")
 fun convertCbzToPDF(
     fileUri: List<Uri>,
-    context: Context,
+    contextHelper: ContextHelper,
     subStepStatusAction: (String) -> Unit = { status -> logger.info(status) },
     maxNumberOfPages: Int = 100,
     outputFileNames: List<String> = List(fileUri.size) { index -> "output_$index.pdf" },
     overrideSortOrderToUseOffset: Boolean = false,
-    outputDirectory: File = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+    outputDirectory: File = contextHelper.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
 ): List<File> {
     if (fileUri.isEmpty()) { return mutableListOf() }
     val outputFiles = mutableListOf<File>()
@@ -34,11 +33,11 @@ fun convertCbzToPDF(
     fileUri.forEachIndexed  { index, uri ->
         val outputFileName = outputFileNames[index]
 
-        val inputStream = context.contentResolver.openInputStream(uri) ?: run {
+        val inputStream = contextHelper.openInputStream(uri) ?: run {
             subStepStatusAction("No images found in CBZ file: $outputFileName"); return@forEachIndexed
         }
 
-        val tempFile = copyCbzToCache(context, inputStream)
+        val tempFile = copyCbzToCache(contextHelper, inputStream)
 
         // Open the CBZ file as a zip
         val zipFile = ZipFile(tempFile)
@@ -90,8 +89,8 @@ fun convertCbzToPDF(
     return outputFiles
 }
 
-private fun copyCbzToCache(context: Context, inputStream: InputStream): File {
-    val tempFile = File(context.cacheDir, "temp.cbz")
+private fun copyCbzToCache(contextHelper: ContextHelper, inputStream: InputStream): File {
+    val tempFile = File(contextHelper.getCacheDir(), "temp.cbz")
     tempFile.outputStream().use { outputStream ->
         inputStream.copyTo(outputStream)
     }

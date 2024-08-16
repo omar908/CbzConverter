@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.puchunguita.cbzconverter.ContextHelper
 import com.puchunguita.cbzconverter.MainViewModel
 import com.puchunguita.cbzconverter.ui.theme.CbzConverterTheme
 
@@ -217,7 +218,7 @@ fun ConfigurationPagePreview() {
     CbzConverterTheme {
         ConfigurationPage(
             maxNumberOfPages = 100,
-            viewModel = MainViewModel(application = ComponentActivity().application),
+            viewModel = MainViewModel(contextHelper = ContextHelper(ComponentActivity())),
             isCurrentlyConverting = false,
             overrideSortOrderToUseOffset = false,
             overrideFileName = "test",
@@ -238,7 +239,7 @@ fun FileNameOverrideConfigSegmentPreview() {
     CbzConverterTheme {
         FileNameOverrideConfigSegment(
             overrideFileName = "test",
-            viewModel = MainViewModel(application = ComponentActivity().application),
+            viewModel = MainViewModel(contextHelper = ContextHelper(ComponentActivity())),
             focusManager = LocalFocusManager.current,
             isCurrentlyConverting = false,
             selectedFilesUri = listOf()
@@ -252,7 +253,7 @@ fun SortOrderOverrideConfigSegmentPreview() {
     CbzConverterTheme {
         SortOrderOverrideConfigSegment(
             overrideSortOrderToUseOffset = false,
-            viewModel = MainViewModel(application = ComponentActivity().application)
+            viewModel = MainViewModel(contextHelper = ContextHelper(ComponentActivity())),
         )
     }
 }
@@ -263,7 +264,7 @@ fun MaxNumberOfPagesConfigSegmentPreview() {
     CbzConverterTheme {
         MaxNumberOfPagesConfigSegment(
             maxNumberOfPages = 100,
-            viewModel = MainViewModel(application = ComponentActivity().application),
+            viewModel = MainViewModel(contextHelper = ContextHelper(ComponentActivity())),
             focusManager = LocalFocusManager.current,
             isCurrentlyConverting = false
         )
@@ -276,7 +277,7 @@ fun OutputDirectoryOverrideConfigSegmentPreview() {
     CbzConverterTheme {
         OutputDirectoryOverrideConfigSegment(
             overrideOutputDirectoryUri = null,
-            viewModel = MainViewModel(application = ComponentActivity().application),
+            viewModel = MainViewModel(contextHelper = ContextHelper(ComponentActivity())),
             activity = ComponentActivity(),
             directoryPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
                 uri?.let {

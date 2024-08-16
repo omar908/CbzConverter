@@ -1,17 +1,11 @@
 package com.puchunguita.cbzconverter
 
-import android.annotation.SuppressLint
-import android.app.Application
-import android.content.Context
 import android.net.Uri
 import android.os.Environment
-import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.lifecycle.AndroidViewModel
-import com.anggrayudi.storage.file.DocumentFileCompat
-import com.anggrayudi.storage.file.getAbsolutePath
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +20,7 @@ import java.util.logging.Level
 import java.util.logging.Logger
 import java.util.stream.Collectors
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
 
     companion object {
         private const val NOTHING_PROCESSING = "Nothing Processing"
@@ -34,8 +28,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         const val NO_OVERRIDE_FILE_NAME = "No override file name provided"
     }
 
-    @SuppressLint("StaticFieldLeak")
-    private val context = getApplication<Application>().applicationContext
     private val logger = Logger.getLogger(MainViewModel::class.java.name)
 
     private val _isCurrentlyConverting: MutableStateFlow<Boolean> = MutableStateFlow(false)
@@ -157,7 +149,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         try {
             updateSelectedFileUri(newSelectedFileUris)
             val separator = "\n"
-            val selectedFileNames = newSelectedFileUris.stream().map { selectedFileUri -> selectedFileUri.getFileName(context) }.collect(
+            val selectedFileNames = newSelectedFileUris.stream().map { selectedFileUri -> selectedFileUri.getFileName() }.collect(
                 Collectors.toList()).joinToString(separator)
             updateSelectedFileNameFromUserInput(selectedFileNames)
             updateCurrentTaskStatusMessage("Updated SelectedFileUri: $newSelectedFileUris")
@@ -188,7 +180,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     ) {
         updateCurrentTaskStatusMessageSuspend(message, loggerLevel)
         withContext(Dispatchers.Main) {
-            Toast.makeText(context, message, toastLength).show()
+            contextHelper.showToast(message, toastLength)
         }
     }
 
@@ -202,7 +194,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 updateCurrentTaskStatusMessageSuspend(message = "Conversion from CBZ to PDF started")
                 val pdfFiles = convertCbzToPDF(
                     fileUri = fileUris,
-                    context = context,
+                    contextHelper = contextHelper,
                     subStepStatusAction = { message: String ->
                         CoroutineScope(Dispatchers.Main).launch {
                             updateCurrentSubTaskStatusStatusMessage(message)
@@ -240,7 +232,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun getFileNameForPdf(filesUri: List<Uri>): List<String> {
-        var fileUri = filesUri.stream().map {it.getFileName(context)}.collect(Collectors.toList())
+        var fileUri = filesUri.stream().map {it.getFileName()}.collect(Collectors.toList())
 
         if (_overrideFileName.value != NO_OVERRIDE_FILE_NAME) {
             fileUri = if(fileUri.size == 1) {
@@ -258,8 +250,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         var outputFolder =
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         if (_overrideOutputDirectoryUri.value != null) {
-            val file = DocumentFileCompat.fromUri(context, _overrideOutputDirectoryUri.value!!)
-            outputFolder = file?.getAbsolutePath(context)?.let { File(it) }
+            outputFolder = contextHelper.getOutputFolderUri(_overrideOutputDirectoryUri.value)
         }
         return outputFolder
     }
@@ -278,19 +269,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         PermissionsManager.checkPermissionAndSelectDirectoryAction(activity, directoryPickerLauncher)
     }
 
-    private fun Uri.getFileName(context: Context): String {
-        var name = "Unknown"
-        context.contentResolver.query(
-            this,
-            null,
-            null,
-            null,
-            null
-        )?.use { cursor ->
-            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-            cursor.moveToFirst()
-            name = cursor.getString(nameIndex)
-        }
-        return name
+   private fun Uri.getFileName(): String {
+        return contextHelper.getFileName(this)
     }
 }

@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.puchunguita.cbzconverter.ContextHelper
 import com.puchunguita.cbzconverter.MainViewModel
 import com.puchunguita.cbzconverter.ui.theme.CbzConverterTheme
 
@@ -142,7 +143,7 @@ fun CbzConverterPagePreview() {
     CbzConverterTheme {
         CbzConverterPage(
             selectedFileName = "Sample File Name",
-            viewModel = MainViewModel(application = ComponentActivity().application),
+            viewModel = MainViewModel(contextHelper = ContextHelper(ComponentActivity())),
             activity = ComponentActivity(),
             filePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uri: List<Uri> ->
                 uri.let {
@@ -162,7 +163,7 @@ fun FileConversionSegmentPreview() {
     CbzConverterTheme {
         FileConversionSegment(
             selectedFileName = "Sample File Name",
-            viewModel = MainViewModel(application = ComponentActivity().application),
+            viewModel = MainViewModel(contextHelper = ContextHelper(ComponentActivity())),
             activity = ComponentActivity(),
             filePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uri: List<Uri> ->
                 uri.let {
