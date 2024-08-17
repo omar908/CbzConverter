@@ -21,7 +21,7 @@ import kotlin.math.ceil
 import kotlin.streams.asStream
 
 private val logger = Logger.getLogger("com.puchunguita.cbzconverter.ConversionFunction")
-fun convertCbzToPDF(
+fun convertCbzToPdf(
     fileUri: List<Uri>,
     contextHelper: ContextHelper,
     subStepStatusAction: (String) -> Unit = { status -> logger.info(status) },
@@ -32,27 +32,54 @@ fun convertCbzToPDF(
     outputDirectory: File = contextHelper.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
 ): List<File> {
     if (fileUri.isEmpty()) { return mutableListOf() }
-    var outputFiles = mutableListOf<File>()
-
+    val outputFiles = mutableListOf<File>()
 
     if (overrideMergeFiles) {
-        val combinedTempFile = File(contextHelper.getCacheDir(), "combined_temp.cbz")
+        return mergeFilesAndCreatePdf(
+            contextHelper,
+            fileUri,
+            subStepStatusAction,
+            outputFileNames,
+            outputFiles,
+            overrideSortOrderToUseOffset,
+            outputDirectory,
+            maxNumberOfPages
+        )
+    } else {
+        return applyEachFileAndCreatePdf(
+            fileUri,
+            outputFileNames,
+            contextHelper,
+            subStepStatusAction,
+            outputFiles,
+            overrideSortOrderToUseOffset,
+            outputDirectory,
+            maxNumberOfPages
+        )
+    }
+}
 
-        ZipOutputStream(FileOutputStream(combinedTempFile)).use { zipOutputStream ->
-            fileUri.forEachIndexed() { index, uri ->
-                val inputStream = contextHelper.openInputStream(uri) ?: run {
-                    subStepStatusAction("Could not copy CBZ file to cache: ${uri.path}")
-                    return@forEachIndexed
-                }
-                addEntriesToZip(inputStream, zipOutputStream, outputFileNames[index], index)
-                inputStream.close()
-            }
+private fun applyEachFileAndCreatePdf(
+    fileUri: List<Uri>,
+    outputFileNames: List<String>,
+    contextHelper: ContextHelper,
+    subStepStatusAction: (String) -> Unit,
+    outputFiles: MutableList<File>,
+    overrideSortOrderToUseOffset: Boolean,
+    outputDirectory: File,
+    maxNumberOfPages: Int
+): MutableList<File> {
+    fileUri.forEachIndexed { index, uri ->
+        val outputFileName = outputFileNames[index]
+
+        val inputStream = contextHelper.openInputStream(uri) ?: run {
+            subStepStatusAction("Could not copy CBZ file to cache: $outputFileName"); return@forEachIndexed
         }
 
-        val outputFileName = outputFileNames[0]
+        val tempFile = copyCbzToCacheAndCloseInputStream(contextHelper, inputStream)
 
-        outputFiles = createPdfEitherSingleOrMultiple(
-            tempFile = combinedTempFile,
+        createPdfEitherSingleOrMultiple(
+            tempFile = tempFile,
             subStepStatusAction = subStepStatusAction,
             overrideSortOrderToUseOffset = overrideSortOrderToUseOffset,
             outputFileName = outputFileName,
@@ -60,28 +87,44 @@ fun convertCbzToPDF(
             maxNumberOfPages = maxNumberOfPages,
             outputFiles = outputFiles
         )
+    }
+    return outputFiles
+}
 
-    } else {
-        fileUri.forEachIndexed  { index, uri ->
-            val outputFileName = outputFileNames[index]
+private fun mergeFilesAndCreatePdf(
+    contextHelper: ContextHelper,
+    fileUri: List<Uri>,
+    subStepStatusAction: (String) -> Unit,
+    outputFileNames: List<String>,
+    outputFiles: MutableList<File>,
+    overrideSortOrderToUseOffset: Boolean,
+    outputDirectory: File,
+    maxNumberOfPages: Int
+): MutableList<File> {
+    val combinedTempFile = File(contextHelper.getCacheDir(), "combined_temp.cbz")
 
+    ZipOutputStream(FileOutputStream(combinedTempFile)).use { zipOutputStream ->
+        fileUri.forEachIndexed() { index, uri ->
             val inputStream = contextHelper.openInputStream(uri) ?: run {
-                subStepStatusAction("Could not copy CBZ file to cache: $outputFileName"); return@forEachIndexed
+                subStepStatusAction("Could not copy CBZ file to cache: ${uri.path}")
+                return@forEachIndexed
             }
-
-            val tempFile = copyCbzToCacheAndCloseInputStream(contextHelper, inputStream)
-
-            outputFiles = createPdfEitherSingleOrMultiple(
-                tempFile = tempFile,
-                subStepStatusAction = subStepStatusAction,
-                overrideSortOrderToUseOffset = overrideSortOrderToUseOffset,
-                outputFileName = outputFileName,
-                outputDirectory = outputDirectory,
-                maxNumberOfPages = maxNumberOfPages,
-                outputFiles = outputFiles
-            )
+            addEntriesToZip(inputStream, zipOutputStream, outputFileNames[index], index)
+            inputStream.close()
         }
     }
+
+    val outputFileName = outputFileNames[0]
+
+    createPdfEitherSingleOrMultiple(
+        tempFile = combinedTempFile,
+        subStepStatusAction = subStepStatusAction,
+        overrideSortOrderToUseOffset = overrideSortOrderToUseOffset,
+        outputFileName = outputFileName,
+        outputDirectory = outputDirectory,
+        maxNumberOfPages = maxNumberOfPages,
+        outputFiles = outputFiles
+    )
 
     return outputFiles
 }

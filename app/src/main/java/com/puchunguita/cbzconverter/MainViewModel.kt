@@ -199,7 +199,7 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
                 val outputFolder = getOutputFolder()
 
                 updateCurrentTaskStatusMessageSuspend(message = "Conversion from CBZ to PDF started")
-                val pdfFiles = convertCbzToPDF(
+                val pdfFiles = convertCbzToPdf(
                     fileUri = fileUris,
                     contextHelper = contextHelper,
                     subStepStatusAction = { message: String ->
