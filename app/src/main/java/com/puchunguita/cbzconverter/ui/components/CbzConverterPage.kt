@@ -68,7 +68,7 @@ fun CbzConverterPage(
 @Composable
 private fun TasksStatusSegment(currentTaskStatus: String, currentSubTaskStatus: String) {
     Column(
-        Modifier.height(200.dp),
+        Modifier.height(220.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -83,8 +83,14 @@ private fun TasksStatusSegment(currentTaskStatus: String, currentSubTaskStatus: 
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(text = "Current Sub-Task Status:", fontWeight = FontWeight.SemiBold)
-        Text(text = currentSubTaskStatus)
+        Text(text = "Current Sub-Task Status (Scrollable):", fontWeight = FontWeight.SemiBold)
+        Column(
+            Modifier.height(100.dp),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            val scroll = rememberScrollState(0)
+            Text(text = currentSubTaskStatus, modifier = Modifier.verticalScroll(scroll))
+        }
     }
 }
 
@@ -98,7 +104,7 @@ private fun FileConversionSegment(
     selectedFilesUri: List<Uri>
 ) {
     Column(
-        Modifier.height(250.dp),
+        Modifier.height(230.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

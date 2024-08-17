@@ -101,6 +101,7 @@ private fun mergeFilesAndCreatePdf(
     outputDirectory: File,
     maxNumberOfPages: Int
 ): MutableList<File> {
+    subStepStatusAction("Creating combined_temp.cbz in Cache")
     val combinedTempFile = File(contextHelper.getCacheDir(), "combined_temp.cbz")
 
     ZipOutputStream(FileOutputStream(combinedTempFile)).use { zipOutputStream ->
@@ -109,7 +110,7 @@ private fun mergeFilesAndCreatePdf(
                 subStepStatusAction("Could not copy CBZ file to cache: ${uri.path}")
                 return@forEachIndexed
             }
-            addEntriesToZip(inputStream, zipOutputStream, outputFileNames[index], index)
+            addEntriesToZip(inputStream, zipOutputStream, outputFileNames[index], index, subStepStatusAction)
             inputStream.close()
         }
     }
@@ -151,14 +152,17 @@ private fun addEntriesToZip(
     inputStream: InputStream,
     zipOutputStream: ZipOutputStream,
     fileName: String,
-    index: Int
+    index: Int,
+    subStepStatusAction: (String) -> Unit,
 ) {
     ZipInputStream(inputStream).use { zipInputStream ->
         var zipEntry = zipInputStream.nextEntry
         while (zipEntry != null) {
             // Using index for ordering by name to continue functioning correctly
             // filename is added as prefix to ensure unique naming per file, otherwise duplication error
-            zipOutputStream.putNextEntry(ZipEntry("${index}_"+fileName+"_"+zipEntry.name))
+            val currentFileUniqueName = "${index}_"+fileName+"_"+zipEntry.name
+            subStepStatusAction("Adding ZipEntry into combined_temp.cbz: $currentFileUniqueName")
+            zipOutputStream.putNextEntry(ZipEntry(currentFileUniqueName))
             zipInputStream.copyTo(zipOutputStream)
             zipOutputStream.closeEntry()
             zipEntry = zipInputStream.nextEntry
