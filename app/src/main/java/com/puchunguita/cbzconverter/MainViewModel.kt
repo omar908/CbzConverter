@@ -26,6 +26,7 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
         private const val NOTHING_PROCESSING = "Nothing Processing"
         private const val NO_FILE_SELECTED = "No file selected"
         const val EMPTY_STRING = ""
+        private const val DEFAULT_MAX_NUMBER_OF_PAGES = 500
     }
 
     private val logger = Logger.getLogger(MainViewModel::class.java.name)
@@ -39,7 +40,7 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
     private val _currentSubTaskStatus: MutableStateFlow<String> = MutableStateFlow(NOTHING_PROCESSING)
     val currentSubTaskStatus = _currentSubTaskStatus.asStateFlow()
 
-    private val _maxNumberOfPages: MutableStateFlow<Int> = MutableStateFlow(100)
+    private val _maxNumberOfPages: MutableStateFlow<Int> = MutableStateFlow(DEFAULT_MAX_NUMBER_OF_PAGES)
     val maxNumberOfPages = _maxNumberOfPages.asStateFlow()
 
     private val _overrideSortOrderToUseOffset: MutableStateFlow<Boolean> = MutableStateFlow(FALSE)
@@ -113,7 +114,7 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
             updateCurrentTaskStatusMessage("Updated maxNumberOfPages size: $maxNumberOfPages")
         } catch (e: Exception) {
             updateCurrentTaskStatusMessage("Invalid maxNumberOfPages size: $maxNumberOfPages reverting to default value")
-            updateMaxNumberOfPages(10)
+            updateMaxNumberOfPages(DEFAULT_MAX_NUMBER_OF_PAGES)
         }
     }
 
