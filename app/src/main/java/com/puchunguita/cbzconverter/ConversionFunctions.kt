@@ -8,12 +8,15 @@ import com.itextpdf.kernel.pdf.PdfWriter
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.Image
 import java.io.File
+import java.io.FileOutputStream
 import java.io.InputStream
 import java.util.logging.Logger
 import java.util.stream.Collectors
 import java.util.stream.IntStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 import kotlin.math.ceil
 import kotlin.streams.asStream
 
@@ -25,56 +28,59 @@ fun convertCbzToPDF(
     maxNumberOfPages: Int = 100,
     outputFileNames: List<String> = List(fileUri.size) { index -> "output_$index.pdf" },
     overrideSortOrderToUseOffset: Boolean = false,
+    overrideMergeFiles: Boolean = false,
     outputDirectory: File = contextHelper.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
 ): List<File> {
     if (fileUri.isEmpty()) { return mutableListOf() }
-    val outputFiles = mutableListOf<File>()
+    var outputFiles = mutableListOf<File>()
 
-    fileUri.forEachIndexed  { index, uri ->
-        val outputFileName = outputFileNames[index]
 
-        val inputStream = contextHelper.openInputStream(uri) ?: run {
-            subStepStatusAction("Could not copy CBZ file to cache: $outputFileName"); return@forEachIndexed
+    if (overrideMergeFiles) {
+        val combinedTempFile = File(contextHelper.getCacheDir(), "combined_temp.cbz")
+
+        ZipOutputStream(FileOutputStream(combinedTempFile)).use { zipOutputStream ->
+            fileUri.forEachIndexed() { index, uri ->
+                val inputStream = contextHelper.openInputStream(uri) ?: run {
+                    subStepStatusAction("Could not copy CBZ file to cache: ${uri.path}")
+                    return@forEachIndexed
+                }
+                addEntriesToZip(inputStream, zipOutputStream, outputFileNames[index], index)
+                inputStream.close()
+            }
         }
 
-        val tempFile = copyCbzToCacheAndCloseInputStream(contextHelper, inputStream)
+        val outputFileName = outputFileNames[0]
 
-        // Open the CBZ file as a zip
-        val zipFile = ZipFile(tempFile)
+        outputFiles = createPdfEitherSingleOrMultiple(
+            tempFile = combinedTempFile,
+            subStepStatusAction = subStepStatusAction,
+            overrideSortOrderToUseOffset = overrideSortOrderToUseOffset,
+            outputFileName = outputFileName,
+            outputDirectory = outputDirectory,
+            maxNumberOfPages = maxNumberOfPages,
+            outputFiles = outputFiles
+        )
 
-        val totalNumberOfImages = zipFile.size()
-        if (totalNumberOfImages == 0) { subStepStatusAction("No images found in CBZ file: $outputFileName"); return@forEachIndexed }
+    } else {
+        fileUri.forEachIndexed  { index, uri ->
+            val outputFileName = outputFileNames[index]
 
-        val zipFileEntriesList = orderZipEntriesToList(overrideSortOrderToUseOffset, zipFile)
+            val inputStream = contextHelper.openInputStream(uri) ?: run {
+                subStepStatusAction("Could not copy CBZ file to cache: $outputFileName"); return@forEachIndexed
+            }
 
-        if (!outputDirectory.exists()) { outputDirectory.mkdirs() }
+            val tempFile = copyCbzToCacheAndCloseInputStream(contextHelper, inputStream)
 
-        if (totalNumberOfImages > maxNumberOfPages) {
-            createMultiplePdfFromCbz(
-                totalNumberOfImages,
-                maxNumberOfPages,
-                zipFileEntriesList,
-                outputFileName,
-                outputDirectory,
-                subStepStatusAction,
-                zipFile,
-                outputFiles
-            )
-        } else {
-            createSinglePdfFromCbz(
-                zipFileEntriesList,
-                outputFileName,
-                outputDirectory,
-                subStepStatusAction,
-                totalNumberOfImages,
-                zipFile,
-                outputFiles
+            outputFiles = createPdfEitherSingleOrMultiple(
+                tempFile = tempFile,
+                subStepStatusAction = subStepStatusAction,
+                overrideSortOrderToUseOffset = overrideSortOrderToUseOffset,
+                outputFileName = outputFileName,
+                outputDirectory = outputDirectory,
+                maxNumberOfPages = maxNumberOfPages,
+                outputFiles = outputFiles
             )
         }
-
-        zipFile.close()
-        tempFile.delete()
-
     }
 
     return outputFiles
@@ -96,6 +102,73 @@ private fun orderZipEntriesToList(
             .sorted { f1, f2 -> f1.name.compareTo(f2.name) }
             .collect(Collectors.toList())
     }
+}
+
+private fun addEntriesToZip(
+    inputStream: InputStream,
+    zipOutputStream: ZipOutputStream,
+    fileName: String,
+    index: Int
+) {
+    ZipInputStream(inputStream).use { zipInputStream ->
+        var zipEntry = zipInputStream.nextEntry
+        while (zipEntry != null) {
+            // Using index for ordering by name to continue functioning correctly
+            // filename is added as prefix to ensure unique naming per file, otherwise duplication error
+            zipOutputStream.putNextEntry(ZipEntry("${index}_"+fileName+"_"+zipEntry.name))
+            zipInputStream.copyTo(zipOutputStream)
+            zipOutputStream.closeEntry()
+            zipEntry = zipInputStream.nextEntry
+        }
+    }
+}
+
+fun createPdfEitherSingleOrMultiple(
+    tempFile: File,
+    subStepStatusAction: (String) -> Unit,
+    overrideSortOrderToUseOffset: Boolean,
+    outputFileName: String,
+    outputDirectory: File,
+    maxNumberOfPages: Int,
+    outputFiles: MutableList<File>
+
+): MutableList<File> {
+    val zipFile = ZipFile(tempFile)
+
+    val totalNumberOfImages = zipFile.size()
+    if (totalNumberOfImages == 0) { subStepStatusAction("No images found in CBZ file: $outputFileName"); return mutableListOf() }
+
+    val zipFileEntriesList = orderZipEntriesToList(overrideSortOrderToUseOffset, zipFile)
+
+    if (!outputDirectory.exists()) { outputDirectory.mkdirs() }
+
+    if (totalNumberOfImages > maxNumberOfPages) {
+        createMultiplePdfFromCbz(
+            totalNumberOfImages,
+            maxNumberOfPages,
+            zipFileEntriesList,
+            outputFileName,
+            outputDirectory,
+            subStepStatusAction,
+            zipFile,
+            outputFiles
+        )
+    } else {
+        createSinglePdfFromCbz(
+            zipFileEntriesList,
+            outputFileName,
+            outputDirectory,
+            subStepStatusAction,
+            totalNumberOfImages,
+            zipFile,
+            outputFiles
+        )
+    }
+
+    zipFile.close()
+    tempFile.delete()
+
+    return outputFiles
 }
 
 private fun copyCbzToCacheAndCloseInputStream(contextHelper: ContextHelper, inputStream: InputStream): File {

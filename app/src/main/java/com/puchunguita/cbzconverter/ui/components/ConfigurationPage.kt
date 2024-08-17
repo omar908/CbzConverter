@@ -40,6 +40,7 @@ fun ConfigurationPage(
     viewModel: MainViewModel,
     isCurrentlyConverting: Boolean,
     overrideSortOrderToUseOffset: Boolean,
+    overrideMergeFiles: Boolean,
     overrideFileName: String,
     selectedFilesUri: List<Uri>,
     overrideOutputDirectoryUri: Uri?,
@@ -71,6 +72,11 @@ fun ConfigurationPage(
         Spacer(modifier = Modifier.height(16.dp))
 
         SortOrderOverrideConfigSegment(overrideSortOrderToUseOffset, viewModel)
+
+        Divider()
+        Spacer(modifier = Modifier.height(16.dp))
+
+        MergeFilesOverrideConfigSegment(overrideMergeFiles, viewModel)
 
         Divider()
         Spacer(modifier = Modifier.height(16.dp))
@@ -180,6 +186,25 @@ private fun SortOrderOverrideConfigSegment(
 }
 
 @Composable
+private fun MergeFilesOverrideConfigSegment(
+    overrideMergeFiles: Boolean,
+    viewModel: MainViewModel
+) {
+    Text(
+        text = "Default Behavior:\nApplies logic to each individual CBZ file.\n" +
+                "Merge Files Override, mergers all files into one file.\n" +
+                "Then applies additional configuration to that one file.\n"+
+                "Note: When using this option the first file selected will be used as filename,\n" +
+                "Unless an override file name is provide.\n"+
+                "Merge Files Override: $overrideMergeFiles"
+    )
+    Checkbox(
+        checked = overrideMergeFiles,
+        onCheckedChange = viewModel::toggleMergeFilesOverride
+    )
+}
+
+@Composable
 private fun MaxNumberOfPagesConfigSegment(
     maxNumberOfPages: Int,
     viewModel: MainViewModel,
@@ -221,6 +246,7 @@ fun ConfigurationPagePreview() {
             viewModel = MainViewModel(contextHelper = ContextHelper(ComponentActivity())),
             isCurrentlyConverting = false,
             overrideSortOrderToUseOffset = false,
+            overrideMergeFiles = false,
             overrideFileName = "test",
             selectedFilesUri = listOf(),
             overrideOutputDirectoryUri = null,

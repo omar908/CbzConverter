@@ -45,6 +45,9 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
     private val _overrideSortOrderToUseOffset: MutableStateFlow<Boolean> = MutableStateFlow(FALSE)
     val overrideSortOrderToUseOffset = _overrideSortOrderToUseOffset.asStateFlow()
 
+    private val _overrideMergeFiles: MutableStateFlow<Boolean> = MutableStateFlow(FALSE)
+    val overrideMergeFiles = _overrideMergeFiles.asStateFlow()
+
     private val _selectedFileName: MutableStateFlow<String> = MutableStateFlow(NO_FILE_SELECTED)
     val selectedFileName = _selectedFileName.asStateFlow()
 
@@ -68,6 +71,10 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
 
     fun toggleOverrideSortOrderToUseOffset(newValue: Boolean) {
         _overrideSortOrderToUseOffset.update { newValue }
+    }
+
+    fun toggleMergeFilesOverride(newValue: Boolean) {
+        _overrideMergeFiles.update { newValue }
     }
 
     private suspend fun updateConversionState(forceUpdate: Boolean) {
@@ -203,6 +210,7 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
                     maxNumberOfPages = _maxNumberOfPages.value,
                     outputFileNames = pdfFileName,
                     overrideSortOrderToUseOffset = _overrideSortOrderToUseOffset.value,
+                    overrideMergeFiles = _overrideMergeFiles.value,
                     outputDirectory = outputFolder
                 )
                 checkPdfsFilesSizeAndUpdateStatus(pdfFiles)

@@ -52,6 +52,7 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
     val currentSubTaskStatus by viewModel.currentSubTaskStatus.collectAsState()
     val maxNumberOfPages by viewModel.maxNumberOfPages.collectAsState()
     val overrideSortOrderToUseOffset by viewModel.overrideSortOrderToUseOffset.collectAsState()
+    val overrideMergeFiles by viewModel.overrideMergeFiles.collectAsState()
     val selectedFileName by viewModel.selectedFileName.collectAsState()
     val selectedFilesUri by viewModel.selectedFileUri.collectAsState()
     val overrideFileName by viewModel.overrideFileName.collectAsState()
@@ -79,6 +80,7 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
                 viewModel,
                 isCurrentlyConverting,
                 overrideSortOrderToUseOffset,
+                overrideMergeFiles,
                 overrideFileName,
                 selectedFilesUri,
                 overrideOutputDirectoryUri,
