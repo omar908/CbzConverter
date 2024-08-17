@@ -37,7 +37,7 @@ fun convertCbzToPDF(
             subStepStatusAction("Could not copy CBZ file to cache: $outputFileName"); return@forEachIndexed
         }
 
-        val tempFile = copyCbzToCache(contextHelper, inputStream)
+        val tempFile = copyCbzToCacheAndCloseInputStream(contextHelper, inputStream)
 
         // Open the CBZ file as a zip
         val zipFile = ZipFile(tempFile)
@@ -98,7 +98,7 @@ private fun orderZipEntriesToList(
     }
 }
 
-private fun copyCbzToCache(contextHelper: ContextHelper, inputStream: InputStream): File {
+private fun copyCbzToCacheAndCloseInputStream(contextHelper: ContextHelper, inputStream: InputStream): File {
     val tempFile = File(contextHelper.getCacheDir(), "temp.cbz")
     tempFile.outputStream().use { outputStream ->
         inputStream.copyTo(outputStream)
