@@ -34,27 +34,18 @@ fun convertCbzToPDF(
         val outputFileName = outputFileNames[index]
 
         val inputStream = contextHelper.openInputStream(uri) ?: run {
-            subStepStatusAction("No images found in CBZ file: $outputFileName"); return@forEachIndexed
+            subStepStatusAction("Could not copy CBZ file to cache: $outputFileName"); return@forEachIndexed
         }
 
         val tempFile = copyCbzToCache(contextHelper, inputStream)
 
         // Open the CBZ file as a zip
         val zipFile = ZipFile(tempFile)
-        val zipFileEntriesStream = zipFile.entries().asSequence().asStream()
 
         val totalNumberOfImages = zipFile.size()
         if (totalNumberOfImages == 0) { subStepStatusAction("No images found in CBZ file: $outputFileName"); return@forEachIndexed }
 
-        // Without `.sorted` it goes based upon order in zip which uses a field called offset, this order is inherited through zipFile.stream().
-        // Using `.sorted`, sorts by file name in ascending order
-        val zipFileEntriesList = if (overrideSortOrderToUseOffset) {
-            zipFileEntriesStream.collect(Collectors.toList())
-        } else {
-            zipFileEntriesStream
-                .sorted { f1, f2 -> f1.name.compareTo(f2.name) }
-                .collect(Collectors.toList())
-        }
+        val zipFileEntriesList = orderZipEntriesToList(overrideSortOrderToUseOffset, zipFile)
 
         if (!outputDirectory.exists()) { outputDirectory.mkdirs() }
 
@@ -87,6 +78,24 @@ fun convertCbzToPDF(
     }
 
     return outputFiles
+}
+
+private fun orderZipEntriesToList(
+    overrideSortOrderToUseOffset: Boolean,
+    zipFile: ZipFile
+): List<ZipEntry> {
+    val zipFileEntriesStream = zipFile.entries().asSequence().asStream()
+
+    // Without `.sorted` it goes based upon order in zip which uses a field called offset,
+        // this order is inherited through zipFile.stream().
+    // Using `.sorted`, sorts by file name in ascending order
+    return if (overrideSortOrderToUseOffset) {
+        zipFileEntriesStream.collect(Collectors.toList())
+    } else {
+        zipFileEntriesStream
+            .sorted { f1, f2 -> f1.name.compareTo(f2.name) }
+            .collect(Collectors.toList())
+    }
 }
 
 private fun copyCbzToCache(contextHelper: ContextHelper, inputStream: InputStream): File {
