@@ -158,9 +158,11 @@ private fun addEntriesToZip(
     ZipInputStream(inputStream).use { zipInputStream ->
         var zipEntry = zipInputStream.nextEntry
         while (zipEntry != null) {
-            // Using index for ordering by name to continue functioning correctly
-            // filename is added as prefix to ensure unique naming per file, otherwise duplication error
-            val currentFileUniqueName = "${index}_"+fileName+"_"+zipEntry.name
+            // Using index for ordering by name to continue functioning correctly.
+            // Adding padding to start, without it passing 10_ is between 0_ and 1_.
+            // filename is added as prefix to ensure unique naming per file, otherwise duplication error.
+            val formattedIndex = index.toString().padStart(4, '0')
+            val currentFileUniqueName = "${formattedIndex}_"+fileName+"_"+zipEntry.name
             subStepStatusAction("Adding ZipEntry into combined_temp.cbz: $currentFileUniqueName")
             zipOutputStream.putNextEntry(ZipEntry(currentFileUniqueName))
             zipInputStream.copyTo(zipOutputStream)
