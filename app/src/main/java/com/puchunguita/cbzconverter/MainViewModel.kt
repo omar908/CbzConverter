@@ -88,7 +88,7 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
 
     private suspend fun updateCurrentTaskStatusMessageSuspend(message: String, level: Level = Level.INFO) {
         withContext(Dispatchers.Main) {
-            updateCurrentTaskStatusMessage(message)
+            updateCurrentTaskStatusMessageByAppending(message)
             logger.log(level, message)
         }
     }
@@ -97,9 +97,17 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
             _currentTaskStatus.update { message }
     }
 
+    private fun updateCurrentTaskStatusMessageByAppending(message: String) {
+        _currentTaskStatus.update { currentMessage -> currentMessage.plus("\n$message") }
+    }
+
+    private fun updateCurrentSubTaskStatusMessage(message: String) {
+        _currentSubTaskStatus.update { message }
+    }
+
     private suspend fun updateCurrentSubTaskStatusStatusMessage(message: String) {
         withContext(Dispatchers.Main) {
-            _currentSubTaskStatus.update { message }
+            _currentSubTaskStatus.update { currentMessage -> currentMessage.plus("\n$message") }
             logger.info(message)
         }
     }
@@ -111,9 +119,9 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
     fun updateMaxNumberOfPagesSizeFromUserInput(maxNumberOfPages: String) {
         try {
             updateMaxNumberOfPages(maxNumberOfPages.trim().toInt())
-            updateCurrentTaskStatusMessage("Updated maxNumberOfPages size: $maxNumberOfPages")
+            updateCurrentTaskStatusMessageByAppending("Updated maxNumberOfPages size: $maxNumberOfPages")
         } catch (e: Exception) {
-            updateCurrentTaskStatusMessage("Invalid maxNumberOfPages size: $maxNumberOfPages reverting to default value")
+            updateCurrentTaskStatusMessageByAppending("Invalid maxNumberOfPages size: $maxNumberOfPages reverting to default value")
             updateMaxNumberOfPages(DEFAULT_MAX_NUMBER_OF_PAGES)
         }
     }
@@ -126,9 +134,9 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
         try {
             if (newOverrideFileName.isBlank()) throw Exception("Blank overrideFileName")
             updateOverrideFileName(newOverrideFileName)
-            updateCurrentTaskStatusMessage("Updated overrideFileName: $newOverrideFileName")
+            updateCurrentTaskStatusMessageByAppending("Updated overrideFileName: $newOverrideFileName")
         } catch (e: Exception) {
-            updateCurrentTaskStatusMessage("Invalid overrideFileName: $newOverrideFileName reverting to empty value")
+            updateCurrentTaskStatusMessageByAppending("Invalid overrideFileName: $newOverrideFileName reverting to empty value")
             updateOverrideFileName(EMPTY_STRING)
         }
     }
@@ -142,9 +150,9 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
             if (newSelectedFileNames.isBlank()) throw Exception("Blank fileName")
             updateSelectedFileName(newSelectedFileNames)
             updateOverrideFileNameFromUserInput(EMPTY_STRING)
-            updateCurrentTaskStatusMessage("Updated selectedFileName: $newSelectedFileNames")
+            updateCurrentTaskStatusMessageByAppending("Updated selectedFileName: $newSelectedFileNames")
         } catch (e: Exception) {
-            updateCurrentTaskStatusMessage("Invalid selectedFileName: $newSelectedFileNames reverting to empty value")
+            updateCurrentTaskStatusMessageByAppending("Invalid selectedFileName: $newSelectedFileNames reverting to empty value")
             updateSelectedFileName(EMPTY_STRING)
         }
     }
@@ -161,8 +169,9 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
                 Collectors.toList()).joinToString(separator)
             updateSelectedFileNameFromUserInput(selectedFileNames)
             updateCurrentTaskStatusMessage("Updated SelectedFileUri: $newSelectedFileUris")
+            updateCurrentSubTaskStatusMessage("Files selected. Ready to Convert")
         } catch (e: Exception) {
-            updateCurrentTaskStatusMessage("Invalid SelectedFileUri: $newSelectedFileUris reverting to empty value")
+            updateCurrentTaskStatusMessageByAppending("Invalid SelectedFileUri: $newSelectedFileUris reverting to empty value")
             updateSelectedFileUri(emptyList())
         }
     }
@@ -174,9 +183,9 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
     fun updateOverrideOutputPathFromUserInput(newOverrideOutputPath: Uri) {
         try {
             updateOverrideOutputDirectoryUri(newOverrideOutputPath)
-            updateCurrentTaskStatusMessage("Updated overrideOutputPath: $newOverrideOutputPath")
+            updateCurrentTaskStatusMessageByAppending("Updated overrideOutputPath: $newOverrideOutputPath")
         } catch (e: Exception) {
-            updateCurrentTaskStatusMessage("Invalid overrideOutputPath: $newOverrideOutputPath reverting to empty value")
+            updateCurrentTaskStatusMessageByAppending("Invalid overrideOutputPath: $newOverrideOutputPath reverting to empty value")
             updateOverrideOutputDirectoryUri(null)
         }
     }
@@ -237,6 +246,7 @@ class MainViewModel(private val contextHelper: ContextHelper) : ViewModel() {
                 message = message,
                 toastLength = Toast.LENGTH_LONG
             )
+            updateCurrentTaskStatusMessageByAppending("Conversion from CBZ to PDF Completed")
         }
     }
 

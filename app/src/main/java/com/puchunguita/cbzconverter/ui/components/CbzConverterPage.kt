@@ -17,6 +17,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -68,7 +69,7 @@ fun CbzConverterPage(
 @Composable
 private fun TasksStatusSegment(currentTaskStatus: String, currentSubTaskStatus: String) {
     Column(
-        Modifier.height(220.dp),
+        Modifier.height(250.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -78,6 +79,9 @@ private fun TasksStatusSegment(currentTaskStatus: String, currentSubTaskStatus: 
             verticalArrangement = Arrangement.Center,
         ) {
             val scroll = rememberScrollState(0)
+            LaunchedEffect(currentTaskStatus) {
+                scroll.animateScrollTo(scroll.maxValue)
+            }
             Text(text = currentTaskStatus, modifier = Modifier.verticalScroll(scroll))
         }
 
@@ -85,10 +89,13 @@ private fun TasksStatusSegment(currentTaskStatus: String, currentSubTaskStatus: 
 
         Text(text = "Current Sub-Task Status (Scrollable):", fontWeight = FontWeight.SemiBold)
         Column(
-            Modifier.height(100.dp),
+            Modifier.height(130.dp),
             verticalArrangement = Arrangement.Center,
         ) {
             val scroll = rememberScrollState(0)
+            LaunchedEffect(currentSubTaskStatus) {
+                scroll.animateScrollTo(scroll.maxValue)
+            }
             Text(text = currentSubTaskStatus, modifier = Modifier.verticalScroll(scroll))
         }
     }

@@ -104,7 +104,7 @@ fun MainScreen(viewModel: MainViewModel, activity: ComponentActivity, modifier: 
         topBar = {
             TopAppBar (title = { Text("CBZ Converter") })
         },
-        sheetPeekHeight = 152.dp
+        sheetPeekHeight = 140.dp
     )
 }
 
